@@ -3,9 +3,9 @@ import numpy as np
 import cv2
 import json
 
-LMDB_ENVS = dict()
-LMDB_HANDLES = dict()
-LMDB_FILELISTS = dict()
+LMDB_ENVS = {}
+LMDB_HANDLES = {}
+LMDB_FILELISTS = {}
 
 
 def get_lmdb_handle(name):
@@ -24,17 +24,15 @@ def decode_img(lmdb_fname, key_name):
     handle = get_lmdb_handle(lmdb_fname)
     binfile = handle.get(key_name.encode())
     if binfile is None:
-        print("Illegal data detected. %s %s" % (lmdb_fname, key_name))
+        print(f"Illegal data detected. {lmdb_fname} {key_name}")
     s = np.frombuffer(binfile, np.uint8)
-    x = cv2.cvtColor(cv2.imdecode(s, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-    return x
+    return cv2.cvtColor(cv2.imdecode(s, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
 def decode_str(lmdb_fname, key_name):
     handle = get_lmdb_handle(lmdb_fname)
     binfile = handle.get(key_name.encode())
-    string = binfile.decode()
-    return string
+    return binfile.decode()
 
 
 def decode_json(lmdb_fname, key_name):

@@ -25,7 +25,7 @@ class VOSMeta:
 
     def load(self, gen_meta: Path):
         if not gen_meta.exists():
-            print("Generated metadata file %s is not found." % gen_meta)
+            print(f"Generated metadata file {gen_meta} is not found.")
             print("Find and run VOSMeta.generate() to create it.")
             raise FileNotFoundError(gen_meta)
         self._data = json.load(open(gen_meta), object_pairs_hook=OrderedDict)
@@ -129,7 +129,13 @@ class VOSMeta:
 
     def select_split(self, dataset_name, split):
         ltr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-        sequences = set([s.strip() for s in open(os.path.join(ltr_path, 'data_specs', dataset_name + '_' + split + '.txt')).readlines()])
+        sequences = {
+            s.strip()
+            for s in open(
+                os.path.join(ltr_path, 'data_specs', f'{dataset_name}_{split}.txt')
+            ).readlines()
+        }
+
         all_sequences = set(self._data.keys())
         to_remove = all_sequences.difference(sequences)
         for seq_name in to_remove:
@@ -161,17 +167,24 @@ class VOSMeta:
         # Try load the cached index
         idx_file = dset_images_path.parent / "frame_names.json"
         if idx_file.exists():
-            print('Loading cached frame names from %s' % idx_file)
+            print(f'Loading cached frame names from {idx_file}')
             all_frame_names = json.load(open(idx_file))
         else:
-            # Cache the data to the user's home directory (guaranteed to be writable)
-            all_frame_names = dict()
-            user_idx_file = Path.home() / (dset_images_path.parent.stem + "_frame_names.json")
+            user_idx_file = (
+                Path.home() / f"{dset_images_path.parent.stem}_frame_names.json"
+            )
+
             print('Indexing YouTubeVOS "all_frames" frame names to %s' % user_idx_file)
-            for seq in self._data:
-                all_frame_names[seq] = [file.stem for file in sorted((dset_images_path / seq).glob("*.jpg"))]
+            all_frame_names = {
+                seq: [
+                    file.stem
+                    for file in sorted((dset_images_path / seq).glob("*.jpg"))
+                ]
+                for seq in self._data
+            }
+
             json.dump(all_frame_names, open(user_idx_file, "w"))
-            print('Done. Move %s to %s to load faster next time.' % (user_idx_file, idx_file))
+            print(f'Done. Move {user_idx_file} to {idx_file} to load faster next time.')
 
         for seq, frame_names in all_frame_names.items():
             self._data[seq]['frame_names'] = frame_names
@@ -239,11 +252,7 @@ class VOSDatasetBase(BaseVideoDataset):
 
     @staticmethod
     def _load_anno(path):
-        if not path.exists():
-            return None
-        # im = np.atleast_3d(np.array(Image.open(path)))
-        im = imread_indexed(path)
-        return im
+        return imread_indexed(path) if path.exists() else None
 
     def get_num_sequences(self):
         return len(self._samples)
@@ -292,12 +301,16 @@ class VOSDatasetBase(BaseVideoDataset):
         frame_names = sequence_info['frame_names']
         f2i = {f: i for i, f in enumerate(frame_names)}
 
-        images = [str(images_root / (f + ".jpg")) for f in frame_names]
+        images = [str(images_root / f"{f}.jpg") for f in frame_names]
 
         # Find the frames where ground truth is available and
         # get the bounding boxes and segmentation labels of those frames
         all_bboxes = self.gmeta.get_bboxes_per_frame(seq_name)
-        gt_labels = [str(annos_root / (f + ".png")) if f in all_bboxes.keys() else None for f in frame_names]
+        gt_labels = [
+            str(annos_root / f"{f}.png") if f in all_bboxes.keys() else None
+            for f in frame_names
+        ]
+
 
         gt_bboxes = OrderedDict()
         for obj_id in sequence_info['object_ids']:
@@ -337,8 +350,16 @@ class VOSDatasetBase(BaseVideoDataset):
 
         meta = self.get_sequence_info(sample_id) if anno is None else anno
         frame_names = meta['frame_names']
-        images = [self._load_image(self._jpeg_path / seq_name / (frame_names[f] + ".jpg")) for f in frame_ids]
-        labels = [self._load_anno(self._anno_path / seq_name / (frame_names[f] + ".png")) for f in frame_ids]
+        images = [
+            self._load_image(self._jpeg_path / seq_name / f"{frame_names[f]}.jpg")
+            for f in frame_ids
+        ]
+
+        labels = [
+            self._load_anno(self._anno_path / seq_name / f"{frame_names[f]}.png")
+            for f in frame_ids
+        ]
+
 
         # Generate bounding boxes for the requested objects
         bboxes = []
@@ -377,7 +398,7 @@ class VOSDatasetBase(BaseVideoDataset):
         return images, anno_frames, object_meta
 
     def get_name(self):
-        return "%s/%s/%s" % (self.name, self.version, self.split)
+        return f"{self.name}/{self.version}/{self.split}"
 
     def has_class_info(self):
         return False

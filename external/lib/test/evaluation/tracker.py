@@ -47,25 +47,31 @@ class Tracker:
 
         env = env_settings()
         if self.run_id is None:
-            self.results_dir = '{}/{}/{}'.format(env.results_path, self.name, self.parameter_name)
-            self.segmentation_dir = '{}/{}/{}'.format(env.segmentation_path, self.name, self.parameter_name)
+            self.results_dir = f'{env.results_path}/{self.name}/{self.parameter_name}'
+            self.segmentation_dir = (
+                f'{env.segmentation_path}/{self.name}/{self.parameter_name}'
+            )
+
         else:
             self.results_dir = '{}/{}/{}_{:03d}'.format(env.results_path, self.name, self.parameter_name, self.run_id)
             self.segmentation_dir = '{}/{}/{}_{:03d}'.format(env.segmentation_path, self.name, self.parameter_name, self.run_id)
         if result_only:
-            self.results_dir = '{}/{}'.format(env.results_path, self.name)
+            self.results_dir = f'{env.results_path}/{self.name}'
 
-        tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                              '..', 'tracker', '%s.py' % self.name))
+        tracker_module_abspath = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), '..', 'tracker', f'{self.name}.py'
+            )
+        )
+
         if os.path.isfile(tracker_module_abspath):
-            tracker_module = importlib.import_module('lib.test.tracker.{}'.format(self.name))
+            tracker_module = importlib.import_module(f'lib.test.tracker.{self.name}')
             self.tracker_class = tracker_module.get_tracker_class()
         else:
             self.tracker_class = None
 
     def create_tracker(self, params):
-        tracker = self.tracker_class(params, self.dataset_name)
-        return tracker
+        return self.tracker_class(params, self.dataset_name)
 
     def run_sequence(self, seq, debug=None):
         """Run tracker on sequence.
@@ -91,8 +97,7 @@ class Tracker:
             tracker.penalty_k = self.penalty
             tracker.window_influence = self.window
 
-        output = self._track_sequence(tracker, seq, init_info)
-        return output
+        return self._track_sequence(tracker, seq, init_info)
 
     def _track_sequence(self, tracker, seq, init_info):
         # Define outputs
@@ -114,19 +119,19 @@ class Tracker:
 
         def _store_outputs(tracker_out: dict, defaults=None):
             defaults = {} if defaults is None else defaults
-            for key in output.keys():
+            for key in output:
                 val = tracker_out.get(key, defaults.get(key, None))
                 if key in tracker_out or val is not None:
                     output[key].append(val)
-        
-        det_list = []       
+
+        det_list = []
         save_det = False # save the detection results
         use_det = False
         use_gt = False
         assert (not save_det) or (not use_det)
 
-        det_root = "/opt/tiger/omnitrack/det/%s" % seq.dataset
-        file_path = os.path.join(det_root, "%s.txt" %seq.name)
+        det_root = f"/opt/tiger/omnitrack/det/{seq.dataset}"
+        file_path = os.path.join(det_root, f"{seq.name}.txt")
         if not os.path.exists(det_root):
             os.makedirs(det_root)
         if use_det:
@@ -243,7 +248,7 @@ class Tracker:
         output_boxes = []
 
         cap = cv.VideoCapture(videofilepath)
-        display_name = 'Display: ' + tracker.params.tracker_name
+        display_name = f'Display: {tracker.params.tracker_name}'
         cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)
         cv.resizeWindow(display_name, 960, 720)
         success, frame = cap.read()
@@ -333,9 +338,8 @@ class Tracker:
 
     def get_parameters(self):
         """Get parameters."""
-        param_module = importlib.import_module('lib.test.parameter.{}'.format(self.name))
-        params = param_module.parameters(self.parameter_name)
-        return params
+        param_module = importlib.import_module(f'lib.test.parameter.{self.name}')
+        return param_module.parameters(self.parameter_name)
 
     def _read_image(self, image_file: str):
         if isinstance(image_file, str):

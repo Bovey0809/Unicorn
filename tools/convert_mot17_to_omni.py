@@ -14,9 +14,7 @@ def parse_args():
     parser.add_argument('--ori_json_file', type=str, default="train.json")
     parser.add_argument('--new_json_file', type=str, default="train_omni.json")
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()

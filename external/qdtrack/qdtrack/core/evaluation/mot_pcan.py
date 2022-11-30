@@ -53,7 +53,7 @@ def preprocessResult(res, anns, cats_mapping, crowd_ioa_thr=0.5):
 
     dropped_gt_ids = set()
     dropped_gts = []
-    print('Results before drop:', sum([len(i) for i in res]))
+    print('Results before drop:', sum(len(i) for i in res))
     # match
     for (r, img) in zip(res, anns['images']):
         anns_in_frame = [
@@ -87,20 +87,17 @@ def preprocessResult(res, anns, cats_mapping, crowd_ioa_thr=0.5):
         # drop fps that fall in crowd regions
         crowd_gt_labels = [a['bbox'] for a in anns_in_frame if a['iscrowd']]
 
-        if len(crowd_gt_labels) > 0 and len(fp_ids) > 0:
+        if crowd_gt_labels and fp_ids:
             ioas = np.max(
                 intersection_over_area(
                     [xyxy2xywh(r[k]['bbox'][:-1]) for k in fp_ids],
                     crowd_gt_labels),
                 axis=1)
-            for i, ioa in zip(fp_ids, ioas):
-                if ioa > crowd_ioa_thr:
-                    dropped_pred.append(i)
-
+            dropped_pred.extend(i for i, ioa in zip(fp_ids, ioas) if ioa > crowd_ioa_thr)
         for p in dropped_pred:
             del r[p]
 
-    print('Results after drop:', sum([len(i) for i in res]))
+    print('Results after drop:', sum(len(i) for i in res))
 
 
 def aggregate_eval_results(summary,
@@ -120,17 +117,17 @@ def aggregate_eval_results(summary,
         res_sum = s.sum()
         new_res = []
         for metric in metrics:
-            if metric == 'mota':
+            if metric == 'idf1':
+                res = quiet_divide(
+                    2 * res_sum['idtp'],
+                    res_sum['num_objects'] + res_sum['num_predictions'])
+            elif metric == 'mota':
                 res = 1. - quiet_divide(
                     res_sum['num_misses'] + res_sum['num_switches'] +
                     res_sum['num_false_positives'], res_sum['num_objects'])
             elif metric == 'motp':
                 res = quiet_divide((s['motp'] * s['num_detections']).sum(),
                                    res_sum['num_detections'])
-            elif metric == 'idf1':
-                res = quiet_divide(
-                    2 * res_sum['idtp'],
-                    res_sum['num_objects'] + res_sum['num_predictions'])
             else:
                 res = res_sum[metric]
             new_res.append(res)
@@ -165,7 +162,7 @@ def aggregate_eval_results(summary,
     dtypes = [
         'float' if m in ['mota', 'motp', 'idf1'] else 'int' for m in metrics
     ]
-    dtypes = {m: d for m, d in zip(metrics, dtypes)}
+    dtypes = dict(zip(metrics, dtypes))
     new_summary = new_summary.astype(dtypes)
 
     strsummary = mm.io.render_summary(
@@ -194,9 +191,11 @@ def eval_mot_pcan(anns, all_results, split_camera=False, class_average=False):
 
     preprocessResult(all_results, anns, cats_mapping)
     anns['annotations'] = [
-        a for a in anns['annotations']
-        if not (a['iscrowd'] or a.get('ignore', False))
+        a
+        for a in anns['annotations']
+        if not a['iscrowd'] and not a.get('ignore', False)
     ]
+
 
     # fast indexing
     annsByAttr = defaultdict(lambda: defaultdict(list))
@@ -209,7 +208,7 @@ def eval_mot_pcan(anns, all_results, split_camera=False, class_average=False):
     global_instance_id = 0
     num_instances = 0
     cat_ids = np.unique(list(cats_mapping.values()))
-    video_camera_mapping = dict()
+    video_camera_mapping = {}
     for cat_id in cat_ids:
         for video in anns['videos']:
             track_acc[cat_id][video['id']] = mm.MOTAccumulator(auto_id=True)
@@ -222,8 +221,8 @@ def eval_mot_pcan(anns, all_results, split_camera=False, class_average=False):
         # if img['frame_id'] == 0:
         if img['index'] == 0:
             global_instance_id += num_instances
-        if len(list(results.keys())) > 0:
-            num_instances = max([int(k) for k in results.keys()]) + 1
+        if list(results.keys()):
+            num_instances = max(int(k) for k in results.keys()) + 1
 
         pred_bboxes, pred_ids = defaultdict(list), defaultdict(list)
         for instance_id, result in results.items():
@@ -249,18 +248,21 @@ def eval_mot_pcan(anns, all_results, split_camera=False, class_average=False):
     print('Generating matchings and summary...')
     empty_cat = []
     for cat, video_track_acc in track_acc.items():
-        for vid, v in video_track_acc.items():
-            if len(v._events) == 0:
-                empty_cat.append([cat, vid])
+        empty_cat.extend(
+            [cat, vid]
+            for vid, v in video_track_acc.items()
+            if len(v._events) == 0
+        )
+
     for cat, vid in empty_cat:
         track_acc[cat].pop(vid)
 
     names, acc = [], []
     for cat, video_track_acc in track_acc.items():
         for vid, v in video_track_acc.items():
-            name = '{}_{}'.format(cat, vid)
+            name = f'{cat}_{vid}'
             if split_camera:
-                name += '_{}'.format(video_camera_mapping[vid])
+                name += f'_{video_camera_mapping[vid]}'
             names.append(name)
             acc.append(v)
 
@@ -303,5 +305,4 @@ def eval_mot_pcan(anns, all_results, split_camera=False, class_average=False):
 
     print('Evaluation finsihes with {:.2f} s'.format(time.time() - t))
 
-    out = {k: v for k, v in summary.to_dict().items()}
-    return out
+    return dict(summary.to_dict().items())

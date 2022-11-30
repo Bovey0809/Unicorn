@@ -10,10 +10,7 @@ def rect_to_rel(bb, sz_norm=None):
     """
 
     c = bb[...,:2] + 0.5 * bb[...,2:]
-    if sz_norm is None:
-        c_rel = c / bb[...,2:]
-    else:
-        c_rel = c / sz_norm
+    c_rel = c / bb[...,2:] if sz_norm is None else c / sz_norm
     sz_rel = torch.log(bb[...,2:])
     return torch.cat((c_rel, sz_rel), dim=-1)
 
@@ -22,10 +19,7 @@ def rel_to_rect(bb, sz_norm=None):
     """Inverts the effect of rect_to_rel. See above."""
 
     sz = torch.exp(bb[...,2:])
-    if sz_norm is None:
-        c = bb[...,:2] * sz
-    else:
-        c = bb[...,:2] * sz_norm
+    c = bb[...,:2] * sz if sz_norm is None else bb[...,:2] * sz_norm
     tl = c - 0.5 * sz
     return torch.cat((tl, sz), dim=-1)
 

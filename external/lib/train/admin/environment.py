@@ -29,11 +29,11 @@ def create_default_local_file_train(workspace_dir, data_dir):
                 comment_str = comment[attr]
             if comment_str is None:
                 if attr_val == empty_str:
-                    f.write('        self.{} = {}\n'.format(attr, attr_val))
+                    f.write(f'        self.{attr} = {attr_val}\n')
                 else:
-                    f.write('        self.{} = \'{}\'\n'.format(attr, attr_val))
+                    f.write(f"        self.{attr} = \'{attr_val}\'\n")
             else:
-                f.write('        self.{} = \'{}\'    # {}\n'.format(attr, attr_val, comment_str))
+                f.write(f"        self.{attr} = \'{attr_val}\'    # {comment_str}\n")
 
 
 def env_settings():
@@ -44,5 +44,5 @@ def env_settings():
     except:
         env_file = os.path.join(os.path.dirname(__file__), 'local.py')
         raise RuntimeError(
-            'YOU HAVE NOT SETUP YOUR local.py!!!\n Go to "{}" and set all the paths you need. Then try to run again.'.format(
-                env_file))
+            f'YOU HAVE NOT SETUP YOUR local.py!!!\n Go to "{env_file}" and set all the paths you need. Then try to run again.'
+        )

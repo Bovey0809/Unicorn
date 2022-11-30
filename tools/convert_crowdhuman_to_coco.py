@@ -4,7 +4,7 @@ import json
 from PIL import Image
 
 DATA_PATH = 'datasets/crowdhuman/'
-OUT_PATH = DATA_PATH + 'annotations/'
+OUT_PATH = f'{DATA_PATH}annotations/'
 SPLITS = ['val', 'train']
 DEBUG = False
 
@@ -13,29 +13,29 @@ def load_func(fpath):
     assert os.path.exists(fpath)
     with open(fpath,'r') as fid:
         lines = fid.readlines()
-    records =[json.loads(line.strip('\n')) for line in lines]
-    return records
+    return [json.loads(line.strip('\n')) for line in lines]
 
 if __name__ == '__main__':
     if not os.path.exists(OUT_PATH):
         os.mkdir(OUT_PATH)
+    video_cnt = 0
     for split in SPLITS:
         data_path = DATA_PATH + split
-        out_path = OUT_PATH + '{}.json'.format(split)
+        out_path = f'{OUT_PATH}{split}.json'
         out = {'images': [], 'annotations': [], 'categories': [{'id': 1, 'name': 'person'}]}
-        ann_path = DATA_PATH + 'annotation_{}.odgt'.format(split)
+        ann_path = f'{DATA_PATH}annotation_{split}.odgt'
         anns_data = load_func(ann_path)
-        image_cnt = 0
         ann_cnt = 0
-        video_cnt = 0
-        for ann_data in anns_data:
-            image_cnt += 1
-            file_path = DATA_PATH + 'CrowdHuman_{}/'.format(split) + '{}.jpg'.format(ann_data['ID'])
+        for image_cnt, ann_data in enumerate(anns_data, start=1):
+            file_path = f'{DATA_PATH}CrowdHuman_{split}/' + f"{ann_data['ID']}.jpg"
             im = Image.open(file_path)
-            image_info = {'file_name': '{}.jpg'.format(ann_data['ID']), 
-                          'id': image_cnt,
-                          'height': im.size[1], 
-                          'width': im.size[0]}
+            image_info = {
+                'file_name': f"{ann_data['ID']}.jpg",
+                'id': image_cnt,
+                'height': im.size[1],
+                'width': im.size[0],
+            }
+
             out['images'].append(image_info)
             if split != 'test':
                 anns = ann_data['gtboxes']
@@ -53,5 +53,8 @@ if __name__ == '__main__':
                                          'ignore' in anns[i]['extra'] and \
                                          anns[i]['extra']['ignore'] == 1 else 0}
                     out['annotations'].append(ann)
-        print('loaded {} for {} images and {} samples'.format(split, len(out['images']), len(out['annotations'])))
+        print(
+            f"loaded {split} for {len(out['images'])} images and {len(out['annotations'])} samples"
+        )
+
         json.dump(out, open(out_path, 'w'))

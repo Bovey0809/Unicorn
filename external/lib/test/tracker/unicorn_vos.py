@@ -16,7 +16,7 @@ class UnicornVOSTrack(BaseTracker):
         self.soft_aggregate = True
         """ model config """
         self.num_classes = 1
-        exp_file_name = "exps/default/%s"%params.exp_name
+        exp_file_name = f"exps/default/{params.exp_name}"
         exp = get_exp(exp_file_name, None)
         self.normalize = exp.normalize
         self.exp_name = params.exp_name
@@ -63,7 +63,7 @@ class UnicornVOSTrack(BaseTracker):
             init_box[2:] += init_box[:2] # (x1, y1, x2, y2)
             init_box_rsz = init_box * r # coordinates on the resized image
             self.lbs_pre_dict[obj_id] = F.interpolate(get_label_map(init_box_rsz, self.input_size[0], self.input_size[1]) \
-                , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
+                    , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
         """deal with new-incoming instances"""
         self.out_dict_pre_new = [] # a list containing out_dict for new in-coming instances
         self.obj_ids_new = []
@@ -83,7 +83,7 @@ class UnicornVOSTrack(BaseTracker):
             final_mask_dict.update(final_mask_dict_tmp)
             inst_scores = np.concatenate([inst_scores, inst_scores_tmp])
         # deal with instances from the current frame"""
-        if "init_object_ids" in info.keys():
+        if "init_object_ids" in info:
             self.out_dict_pre_new.append(out_dict_cur)
             self.obj_ids_new.append(info["init_object_ids"])
             inst_scores_tmp = np.ones((len(info["init_object_ids"]),))
@@ -94,13 +94,13 @@ class UnicornVOSTrack(BaseTracker):
                 init_box[2:] += init_box[:2] # (x1, y1, x2, y2)
                 init_box_rsz = init_box * r # coordinates on the resized image
                 self.lbs_pre_dict[obj_id] = F.interpolate(get_label_map(init_box_rsz, self.input_size[0], self.input_size[1]) \
-                    , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
+                        , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
                 final_mask_dict[obj_id] = (info["init_mask"] == int(obj_id))
         # Deal with overlapped masks
         cur_obj_ids = copy.deepcopy(self.init_object_ids)
         for obj_ids_inter in self.obj_ids_new:
             cur_obj_ids += obj_ids_inter
-        if "init_object_ids" in info.keys():
+        if "init_object_ids" in info:
             cur_obj_ids += info["init_object_ids"]
         # soft aggregation
         cur_obj_ids_int = [int(x) for x in cur_obj_ids]
@@ -146,7 +146,7 @@ class UnicornVOSTrack(BaseTracker):
                 output_mask = output_mask_dict[obj_id]
                 # soft aggregation
                 masks = F.interpolate(output_mask, scale_factor=1/r, mode="bilinear", align_corners=False)\
-            [:, 0, :self.H, :self.W] # (N, height, width)
+                [:, 0, :self.H, :self.W] # (N, height, width)
                 final_mask_dict[obj_id] = np.zeros((self.H, self.W), dtype=np.float32)
                 h_m, w_m = masks.size()[1:]
                 final_mask_dict[obj_id][:h_m, :w_m] = masks[best_idx].cpu().numpy()
@@ -187,7 +187,7 @@ class UnicornVOSTrack(BaseTracker):
                     head = self.model.head
                     if self.use_raft:
                         outputs, locations, dynamic_params, fpn_levels, mask_feats, up_masks = head(fpn_outs_cur, coarse_m_ms, mode="sot")
-                        up_mask_b = up_masks[0:1]
+                        up_mask_b = up_masks[:1]
                         outputs, outputs_mask = postprocess_inst(
                             outputs, locations, dynamic_params, fpn_levels, mask_feats, head.mask_head,
                             self.num_classes, self.confthre, self.nmsthre, class_agnostic=False, d_rate=self.d_rate, up_masks=up_mask_b)

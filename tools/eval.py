@@ -131,7 +131,7 @@ def main(exp, args, num_gpu):
         os.makedirs(file_name, exist_ok=True)
 
     setup_logger(file_name, distributed_rank=rank, filename="val_log.txt", mode="a")
-    logger.info("Args: {}".format(args))
+    logger.info(f"Args: {args}")
 
     if args.conf is not None:
         exp.test_conf = args.conf
@@ -142,7 +142,7 @@ def main(exp, args, num_gpu):
     if args.mask_thres is not None:
         exp.mask_thres = args.mask_thres
     model = exp.get_model()
-    logger.info("Model Summary: {}".format(get_model_info(model, exp.test_size)))
+    logger.info(f"Model Summary: {get_model_info(model, exp.test_size)}")
     # logger.info("Model Structure:\n{}".format(str(model)))
 
     evaluator = exp.get_evaluator(args.batch_size, is_distributed, args.test, args.legacy)
@@ -156,8 +156,8 @@ def main(exp, args, num_gpu):
             ckpt_file = os.path.join(file_name, "best_ckpt.pth")
         else:
             ckpt_file = args.ckpt
-        logger.info("loading checkpoint from {}".format(ckpt_file))
-        loc = "cuda:{}".format(rank)
+        logger.info(f"loading checkpoint from {ckpt_file}")
+        loc = f"cuda:{rank}"
         ckpt = torch.load(ckpt_file, map_location=loc)
         missing_keys, unexpected_keys = model.load_state_dict(ckpt["model"], strict=False)
         print("missing keys:", missing_keys)

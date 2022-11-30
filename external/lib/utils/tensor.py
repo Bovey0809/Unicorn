@@ -41,7 +41,7 @@ class TensorList(list):
 
     def __init__(self, list_of_tensors = None):
         if list_of_tensors is None:
-            list_of_tensors = list()
+            list_of_tensors = []
         super(TensorList, self).__init__(list_of_tensors)
 
     def __deepcopy__(self, memodict={}):
@@ -223,7 +223,7 @@ def tensor_operation(op):
 
     @functools.wraps(op)
     def oplist(*args, **kwargs):
-        if len(args) == 0:
+        if not args:
             raise ValueError('Must be at least one argument without keyword (i.e. operand).')
 
         if len(args) == 1:

@@ -16,7 +16,7 @@ def eval_mota(data_root, txt_path):
     seqs = sorted([s for s in os.listdir(data_root) if s.endswith('FRCNN')])
     #seqs = sorted([s for s in os.listdir(data_root)])
     for seq in seqs:
-        video_out_path = os.path.join(txt_path, seq + '.txt')
+        video_out_path = os.path.join(txt_path, f'{seq}.txt')
         evaluator = Evaluator(data_root, seq, 'mot')
         accs.append(evaluator.eval_file(video_out_path))
     metrics = mm.metrics.motchallenge_metrics
@@ -35,7 +35,7 @@ def get_mota(data_root, txt_path):
     seqs = sorted([s for s in os.listdir(data_root) if s.endswith('FRCNN')])
     #seqs = sorted([s for s in os.listdir(data_root)])
     for seq in seqs:
-        video_out_path = os.path.join(txt_path, seq + '.txt')
+        video_out_path = os.path.join(txt_path, f'{seq}.txt')
         evaluator = Evaluator(data_root, seq, 'mot')
         accs.append(evaluator.eval_file(video_out_path))
     metrics = mm.metrics.motchallenge_metrics
@@ -46,8 +46,7 @@ def get_mota(data_root, txt_path):
         formatters=mh.formatters,
         namemap=mm.io.motchallenge_metric_names
     )
-    mota = float(strsummary.split(' ')[-6][:-1])
-    return mota
+    return float(strsummary.split(' ')[-6][:-1])
 
 
 def write_results_score(filename, results):
@@ -82,12 +81,9 @@ def dti(txt_path, save_path, n_min=25, n_dti=20):
             if n_frame > n_min:
                 frames = tracklet[:, 0]
                 frames_dti = {}
-                for i in range(0, n_frame):
+                for i in range(n_frame):
                     right_frame = frames[i]
-                    if i > 0:
-                        left_frame = frames[i - 1]
-                    else:
-                        left_frame = frames[i]
+                    left_frame = frames[i - 1] if i > 0 else frames[i]
                     # disconnected track interpolation
                     if 1 < right_frame - left_frame < n_dti:
                         num_bi = int(right_frame - left_frame - 1)
@@ -117,9 +113,9 @@ def dti(txt_path, save_path, n_min=25, n_dti=20):
 if __name__ == '__main__':
     exp_name = "unicorn_track_large_mot_challenge"
     data_root = 'datasets/mot/test'
-    txt_path = 'Unicorn_outputs/%s/track_results'%exp_name
-    save_path = 'Unicorn_outputs/%s/track_results_dti'%exp_name
-    
+    txt_path = f'Unicorn_outputs/{exp_name}/track_results'
+    save_path = f'Unicorn_outputs/{exp_name}/track_results_dti'
+
     mkdir_if_missing(save_path)
     dti(txt_path, save_path, n_min=5, n_dti=20)
     print('Before DTI: ')

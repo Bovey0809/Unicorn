@@ -41,7 +41,7 @@ def make_parser():
 @logger.catch
 def main():
     args = make_parser().parse_args()
-    logger.info("args value: {}".format(args))
+    logger.info(f"args value: {args}")
     exp = get_exp(args.exp_file, args.name)
     exp.merge(args.opts)
 
@@ -69,7 +69,7 @@ def main():
 
     mod = torch.jit.trace(model, dummy_input)
     mod.save(args.output_name)
-    logger.info("generated torchscript model named {}".format(args.output_name))
+    logger.info(f"generated torchscript model named {args.output_name}")
 
 
 if __name__ == "__main__":

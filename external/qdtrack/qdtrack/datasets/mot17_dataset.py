@@ -30,26 +30,16 @@ class MOT17Dataset(CocoVideoDataset):
         self.detections = self.load_detections(detection_file)
 
     def load_detections(self, detection_file=None):
-        # support detections in three formats
-        # 1. MMDet: [img_1, img_2, ...]
-        # 2. qdtrack: dict(bbox_results=[img_1, img_2, ...])
-        # 3. Public:
-        #    1) dict(img1_name: [], img2_name: [], ...)
-        #    2) dict(bbox_results=dict(img1_name: [], img2_name: [], ...))
-        # return as a dict or a list
-        if detection_file is not None:
-            detections = mmcv.load(detection_file)
-            if isinstance(detections, dict):
-                # results from qdtrack
-                if 'bbox_results' in detections:
-                    detections = detections['bbox_results']
-            else:
-                # results from mmdet
-                if not isinstance(detections, list):
-                    raise TypeError('detections must be a dict or a list.')
-            return detections
-        else:
+        if detection_file is None:
             return None
+        detections = mmcv.load(detection_file)
+        if isinstance(detections, dict):
+            # results from qdtrack
+            if 'bbox_results' in detections:
+                detections = detections['bbox_results']
+        elif not isinstance(detections, list):
+            raise TypeError('detections must be a dict or a list.')
+        return detections
 
     def prepare_results(self, img_info):
         results = super().prepare_results(img_info)
@@ -120,13 +110,12 @@ class MOT17Dataset(CocoVideoDataset):
         else:
             gt_bboxes_ignore = np.zeros((0, 4), dtype=np.float32)
 
-        ann = dict(
+        return dict(
             bboxes=gt_bboxes,
             labels=gt_labels,
             bboxes_ignore=gt_bboxes_ignore,
-            instance_ids=gt_instance_ids)
-
-        return ann
+            instance_ids=gt_instance_ids,
+        )
 
     def format_results(self,
                        results,
@@ -144,7 +133,7 @@ class MOT17Dataset(CocoVideoDataset):
                 import shutil
                 shutil.rmtree(resfile_path)
 
-        resfiles = dict()
+        resfiles = {}
         for metric in metrics:
             resfiles[metric] = osp.join(resfile_path, metric)
             os.makedirs(resfiles[metric], exist_ok=True)
@@ -195,7 +184,7 @@ class MOT17Dataset(CocoVideoDataset):
                  resfile_path=None,
                  bbox_iou_thr=0.5,
                  track_iou_thr=0.5):
-        eval_results = dict()
+        eval_results = {}
         if isinstance(metric, list):
             metrics = metric
         elif isinstance(metric, str):
@@ -247,10 +236,11 @@ class MOT17Dataset(CocoVideoDataset):
                 namemap=mm.io.motchallenge_metric_names)
             print(str_summary)
 
-            eval_results.update({
+            eval_results |= {
                 mm.io.motchallenge_metric_names[k]: v['OVERALL']
                 for k, v in summary.to_dict().items()
-            })
+            }
+
 
             if tmp_dir is not None:
                 tmp_dir.cleanup()

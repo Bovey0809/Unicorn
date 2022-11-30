@@ -38,25 +38,30 @@ data = dict(
     train=[
         dict(
             type=dataset_type,
-            ann_file=data_root + 'labels/seg_track_20/seg_track_train_cocoformat_new.json',
-            img_prefix=data_root + 'images/seg_track_20/train',
+            ann_file=f'{data_root}labels/seg_track_20/seg_track_train_cocoformat_new.json',
+            img_prefix=f'{data_root}images/seg_track_20/train',
             key_img_sampler=dict(interval=1),
             ref_img_sampler=dict(num_ref_imgs=1, scope=3, method='uniform'),
-            pipeline=train_pipeline),
+            pipeline=train_pipeline,
+        ),
         dict(
             type=dataset_type,
             load_as_video=False,
-            ann_file=data_root + 'labels/ins_seg/polygons/ins_seg_train_cocoformat.json',
-            img_prefix=data_root + 'images/10k/train',
-            pipeline=train_pipeline)
+            ann_file=f'{data_root}labels/ins_seg/polygons/ins_seg_train_cocoformat.json',
+            img_prefix=f'{data_root}images/10k/train',
+            pipeline=train_pipeline,
+        ),
     ],
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'labels/seg_track_20/seg_track_val_cocoformat.json',
-        img_prefix=data_root + 'images/seg_track_20/val',
-        pipeline=test_pipeline),
+        ann_file=f'{data_root}labels/seg_track_20/seg_track_val_cocoformat.json',
+        img_prefix=f'{data_root}images/seg_track_20/val',
+        pipeline=test_pipeline,
+    ),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'labels/seg_track_20/seg_track_val_cocoformat.json',
-        img_prefix=data_root + 'images/seg_track_20/val',
-        pipeline=test_pipeline))
+        ann_file=f'{data_root}labels/seg_track_20/seg_track_val_cocoformat.json',
+        img_prefix=f'{data_root}images/seg_track_20/val',
+        pipeline=test_pipeline,
+    ),
+)

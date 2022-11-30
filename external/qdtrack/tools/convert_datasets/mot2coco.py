@@ -72,9 +72,7 @@ def parse_gts(gts, is_mot15):
             conf = float(gt[6])
             class_id = int(gt[7])
             visibility = float(gt[8])
-        if class_id in USELESS:
-            continue
-        elif class_id in IGNORES:
+        if class_id in USELESS or class_id in IGNORES:
             continue
         anns = dict(
             category_id=1,
@@ -127,12 +125,12 @@ def main():
         outputs['categories'] = [dict(id=1, name='pedestrian')]
         if args.convert_det:
             det_file = osp.join(args.output, f'{subset}_detections.pkl')
-            detections = dict(bbox_results=dict())
+            detections = dict(bbox_results={})
         video_names = os.listdir(in_folder)
         for video_name in tqdm(video_names):
             # basic params
             parse_gt = 'test' not in subset
-            ins_maps = dict()
+            ins_maps = {}
             # load video infos
             video_folder = osp.join(in_folder, video_name)
             infos = mmcv.list_from_file(f'{video_folder}/seqinfo.ini')

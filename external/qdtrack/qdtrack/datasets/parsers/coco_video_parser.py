@@ -51,11 +51,7 @@ class CocoVID(COCO):
     def get_vid_ids(self, vidIds=[]):
         vidIds = vidIds if _isArrayLike(vidIds) else [vidIds]
 
-        if len(vidIds) == 0:
-            ids = self.videos.keys()
-        else:
-            ids = set(vidIds)
-
+        ids = self.videos.keys() if len(vidIds) == 0 else set(vidIds)
         return list(ids)
 
     def get_img_ids_from_vid(self, vidId):

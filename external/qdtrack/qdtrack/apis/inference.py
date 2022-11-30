@@ -105,10 +105,7 @@ def inference_model(model, imgs, frame_id):
         results = model(
             return_loss=False, rescale=True, detection_only=True, **data)
 
-    if not is_batch:
-        return results[0]
-    else:
-        return results
+    return results if is_batch else results[0]
 
 
 def show_result_pyplot(model,

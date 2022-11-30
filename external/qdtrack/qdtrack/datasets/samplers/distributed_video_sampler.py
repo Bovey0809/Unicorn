@@ -10,10 +10,11 @@ class DistributedVideoSampler(_DistributedSampler):
         assert not self.shuffle, 'Specific for video sequential testing.'
         self.num_samples = len(dataset)
 
-        first_frame_indices = []
-        for i, img_info in enumerate(self.dataset.data_infos):
-            if img_info['frame_id'] == 0:
-                first_frame_indices.append(i)
+        first_frame_indices = [
+            i
+            for i, img_info in enumerate(self.dataset.data_infos)
+            if img_info['frame_id'] == 0
+        ]
 
         chunks = np.array_split(first_frame_indices, num_replicas)
         split_flags = [c[0] for c in chunks]

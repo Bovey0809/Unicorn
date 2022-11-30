@@ -65,7 +65,7 @@ class Trainer:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         self.local_rank = get_local_rank()
-        self.device = "cuda:{}".format(self.local_rank)
+        self.device = f"cuda:{self.local_rank}"
         self.use_model_ema = exp.ema
 
         # data/dataloader related attr
@@ -199,17 +199,16 @@ class Trainer:
         loss = outputs["total_loss"]
         if self.exp.use_grad_acc:
             loss /= self.exp.grad_acc_step
-        if not self.exp.use_grad_acc:
-            self.optimizer.zero_grad()
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-        else:
             self.scaler.scale(loss).backward()
             if (self.iter + 1) % self.exp.grad_acc_step == 0:
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
                 self.optimizer.zero_grad()
+        else:
+            self.optimizer.zero_grad()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
         # for k, v in self.model.named_parameters():
         #     if "controller" in k:
         #         print(k, v.grad)
@@ -259,18 +258,17 @@ class Trainer:
 
         if self.exp.use_grad_acc:
             loss = loss / self.exp.grad_acc_step
-        if not self.exp.use_grad_acc:
-            self.optimizer.zero_grad()
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-        else:
             self.scaler.scale(loss).backward()
             if (self.iter + 1) % self.exp.grad_acc_step == 0:
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
                 self.optimizer.zero_grad()
 
+        else:
+            self.optimizer.zero_grad()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
         if self.use_model_ema:
             self.ema_model.update(self.model)
 
@@ -290,8 +288,8 @@ class Trainer:
         )
 
     def before_train(self):
-        logger.info("args: {}".format(self.args))
-        logger.info("exp value:\n{}".format(self.exp))
+        logger.info(f"args: {self.args}")
+        logger.info(f"exp value:\n{self.exp}")
 
         # model related init
         torch.cuda.set_device(self.local_rank)
@@ -330,10 +328,9 @@ class Trainer:
         if self.args.occupy:
             occupy_mem(self.local_rank)
         """Sync-BN"""
-        if self.exp.task not in ["det", "inst"]:
-            if self.exp.sync_bn:
-                print("Using Sync-BN")
-                model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(self.device)
+        if self.exp.task not in ["det", "inst"] and self.exp.sync_bn:
+            print("Using Sync-BN")
+            model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(self.device)
         if getattr(self.exp, "train_mask_only", False):
             model.backbone.eval() # fix backbone BN
             self.set_train_mask_only(model.head) # freeze head BN
@@ -361,7 +358,7 @@ class Trainer:
             self.tblogger = SummaryWriter(self.file_name)
 
         logger.info("Training start...")
-        logger.info("\n{}".format(model))
+        logger.info(f"\n{model}")
 
         if self.exp.task == "uni":
             self.actor = self.exp.get_actor(self.model)
@@ -375,7 +372,7 @@ class Trainer:
         logger.info("training is done.")
 
     def before_epoch(self):
-        logger.info("---> start train epoch{}".format(self.epoch + 1))
+        logger.info(f"---> start train epoch{self.epoch + 1}")
 
         if self.epoch + 1 == self.max_epoch - self.exp.no_aug_epochs or self.no_aug:
             logger.info("--->No mosaic aug now!")
@@ -386,9 +383,8 @@ class Trainer:
             if self.is_distributed:
                 if hasattr(self.model.module.head, "use_l1"):
                     self.model.module.head.use_l1 = True
-            else:
-                if hasattr(self.model.head, "use_l1"):
-                    self.model.head.use_l1 = True
+            elif hasattr(self.model.head, "use_l1"):
+                self.model.head.use_l1 = True
             if not getattr(self.exp, "disable_eval", False):
                 self.exp.eval_interval = 1
             if not self.no_aug:
@@ -396,13 +392,15 @@ class Trainer:
 
     def after_epoch(self):
         self.save_ckpt(ckpt_name="latest")
-        if self.exp.task == "det":
-            if (self.epoch + 1) % self.exp.eval_interval == 0:
-                use_gn = getattr(self.exp, "use_gn", False)
-                if not use_gn:
-                    all_reduce_norm(self.model)
-                if self.exp.task == "det":
-                    self.evaluate_and_save_model()
+        if (
+            self.exp.task == "det"
+            and (self.epoch + 1) % self.exp.eval_interval == 0
+        ):
+            use_gn = getattr(self.exp, "use_gn", False)
+            if not use_gn:
+                all_reduce_norm(self.model)
+            if self.exp.task == "det":
+                self.evaluate_and_save_model()
 
 
     def before_iter(self):
@@ -421,9 +419,8 @@ class Trainer:
             eta_seconds = self.meter["iter_time"].global_avg * left_iters
             eta_str = "ETA: {}".format(datetime.timedelta(seconds=int(eta_seconds)))
 
-            progress_str = "epoch: {}/{}, iter: {}/{}".format(
-                self.epoch + 1, self.max_epoch, self.iter + 1, self.max_iter
-            )
+            progress_str = f"epoch: {self.epoch + 1}/{self.max_epoch}, iter: {self.iter + 1}/{self.max_iter}"
+
             loss_meter = self.meter.get_filtered_meter("loss")
             loss_str = ", ".join(
                 ["{}: {:.3f}".format(k, v.latest) for k, v in loss_meter.items()]
@@ -453,10 +450,12 @@ class Trainer:
             )
         # alternate tasks
         step = getattr(self.exp, "alter_step", 10)
-        if (self.progress_in_iter + 1) % step == 0:
-            if hasattr(self.exp, "train_mode"):
-                if self.exp.train_mode == "alter":
-                    self.train_loader.dataset.dataset.alter_task()
+        if (
+            (self.progress_in_iter + 1) % step == 0
+            and hasattr(self.exp, "train_mode")
+            and self.exp.train_mode == "alter"
+        ):
+            self.train_loader.dataset.dataset.alter_task()
                     # print("cur_task_id:", self.train_loader.dataset.dataset.cur_task_id)
 
     @property
@@ -486,10 +485,9 @@ class Trainer:
             else:
                 self.start_epoch = 0
             logger.info(
-                "loaded checkpoint '{}' (epoch {})".format(
-                    self.args.resume, self.start_epoch
-                )
-            )  # noqa
+                f"loaded checkpoint '{self.args.resume}' (epoch {self.start_epoch})"
+            )
+
         else:
             if self.args.ckpt is not None:
                 logger.info("loading checkpoint for fine tuning")
@@ -528,7 +526,7 @@ class Trainer:
     def save_ckpt(self, ckpt_name, update_best_ckpt=False):
         if self.rank == 0:
             save_model = self.ema_model.ema if self.use_model_ema else self.model.module
-            logger.info("Save weights to {}".format(self.file_name))
+            logger.info(f"Save weights to {self.file_name}")
             ckpt_state = {
                 "start_epoch": self.epoch + 1,
                 "model": save_model.state_dict(),
@@ -545,7 +543,7 @@ class Trainer:
     def set_train_mask_only(self, head):
         import torch.nn as nn
         for m in head.modules(): # fix head BN
-            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.SyncBatchNorm):
+            if isinstance(m, (nn.BatchNorm2d, nn.SyncBatchNorm)):
                 m.eval()
         # open BN for mask prediction
         head.controllers.train()

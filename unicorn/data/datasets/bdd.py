@@ -54,8 +54,7 @@ class BDDDataset(Dataset):
         data = self.datasets[index]
         ref_gt_bboxes = data["ref_gt_bboxes"].data.numpy() # bounding boxes (N, 4)
         ref_gt_labels = data["ref_gt_labels"].data.unsqueeze(-1).numpy() # class labels (N, 1)
-        res = np.concatenate([ref_gt_bboxes, ref_gt_labels], axis=-1) # (N, 5)
-        return res
+        return np.concatenate([ref_gt_bboxes, ref_gt_labels], axis=-1)
     
     def pull_item(self, index):
         data = self.datasets[index]

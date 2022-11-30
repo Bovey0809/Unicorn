@@ -41,9 +41,7 @@ def mask_merge(mask_infor, img_name, bitmask_base):
 def mask_merge_parallel(track_dicts, img_names, bitmask_base, nproc):
     # with Pool(nproc) as pool:
     print('\nCollecting mask information')
-    mask_infors = []
-    for track_dict in track_dicts:
-        mask_infors.append(mask_prepare(track_dict))
+    mask_infors = [mask_prepare(track_dict) for track_dict in track_dicts]
     # mask_infors = pool.map(mask_prepare, tqdm(track_dicts))
     print('\nMerging overlapped masks.')
     multiprocessing.set_start_method('spawn', force=True)

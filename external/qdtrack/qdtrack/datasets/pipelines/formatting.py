@@ -86,7 +86,7 @@ class SeqCollect(VideoCollect):
 
         assert len(outs) == 2
         data = {}
-        data.update(outs[0])
+        data |= outs[0]
         for k, v in outs[1].items():
             data[f'{self.ref_prefix}_{k}'] = v
 

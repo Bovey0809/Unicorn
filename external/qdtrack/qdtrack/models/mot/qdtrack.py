@@ -55,7 +55,7 @@ class QDTrack(TwoStageDetector):
                       **kwargs):
         x = self.extract_feat(img)
 
-        losses = dict()
+        losses = {}
 
         # RPN forward and loss
         proposal_cfg = self.train_cfg.get('rpn_proposal', self.test_cfg.rpn)
@@ -66,7 +66,7 @@ class QDTrack(TwoStageDetector):
             gt_labels=None,
             gt_bboxes_ignore=gt_bboxes_ignore,
             proposal_cfg=proposal_cfg)
-        losses.update(rpn_losses)
+        losses |= rpn_losses
 
         ref_x = self.extract_feat(ref_img)
         ref_proposals = self.rpn_head.simple_test_rpn(ref_x, ref_img_metas)
@@ -108,8 +108,9 @@ class QDTrack(TwoStageDetector):
         else:
             track_result = [
                 np.zeros((0, 6), dtype=np.float32)
-                for i in range(self.roi_head.bbox_head.num_classes)
+                for _ in range(self.roi_head.bbox_head.num_classes)
             ]
+
         return dict(bbox_results=bbox_result, track_results=track_result)
 
     def show_result(self,

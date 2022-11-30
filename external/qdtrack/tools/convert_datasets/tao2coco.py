@@ -21,15 +21,15 @@ def parse_args():
 def get_classes(tao_path, filter_classes=True):
     train = mmcv.load(osp.join(tao_path, 'train.json'))
 
-    train_classes = list(set([_['category_id'] for _ in train['annotations']]))
+    train_classes = list({_['category_id'] for _ in train['annotations']})
     print(f'TAO train set contains {len(train_classes)} categories.')
 
     val = mmcv.load(osp.join(tao_path, 'validation.json'))
-    val_classes = list(set([_['category_id'] for _ in val['annotations']]))
+    val_classes = list({_['category_id'] for _ in val['annotations']})
     print(f'TAO val set contains {len(val_classes)} categories.')
 
     test = mmcv.load(osp.join(tao_path, 'test_categories.json'))
-    test_classes = list(set([_['id'] for _ in test['categories']]))
+    test_classes = list({_['id'] for _ in test['categories']})
     print(f'TAO test set contains {len(test_classes)} categories.')
 
     tao_classes = set(train_classes + val_classes + test_classes)
@@ -42,10 +42,7 @@ def get_classes(tao_path, filter_classes=True):
             name = c['name']
             f.writelines(f'{name}\n')
 
-    if filter_classes:
-        return tao_classes
-    else:
-        return train['categories']
+    return tao_classes if filter_classes else train['categories']
 
 
 def convert_tao(file, classes):

@@ -78,7 +78,7 @@ class STARKProcessing(BaseProcessing):
 
         jittered_size = box[2:4] * torch.exp(torch.randn(2) * self.scale_jitter_factor[mode])
         max_offset = (jittered_size.prod().sqrt() * torch.tensor(self.center_jitter_factor[mode]).float())
-        jittered_center = box[0:2] + 0.5 * box[2:4] + max_offset * (torch.rand(2) - 0.5)
+        jittered_center = box[:2] + 0.5 * box[2:4] + max_offset * (torch.rand(2) - 0.5)
 
         return torch.cat((jittered_center - 0.5 * jittered_size, jittered_size), dim=0)
 
@@ -99,11 +99,13 @@ class STARKProcessing(BaseProcessing):
                 image=data['search_images'], bbox=data['search_anno'], mask=data['search_masks'])
 
         for s in ['search']:
-            assert self.mode == 'sequence' or len(data[s + '_images']) == 1, \
-                "In pair mode, num train/test frames must be 1"
+            assert (
+                self.mode == 'sequence' or len(data[f'{s}_images']) == 1
+            ), "In pair mode, num train/test frames must be 1"
+
 
             # Add a uniform noise to the center pos
-            jittered_anno = [self._get_jittered_box(a, s) for a in data[s + '_anno']]
+            jittered_anno = [self._get_jittered_box(a, s) for a in data[f'{s}_anno']]
 
             # 2021.1.9 Check whether data is valid. Avoid too small bounding boxes
             w, h = torch.stack(jittered_anno, dim=0)[:, 2], torch.stack(jittered_anno, dim=0)[:, 3]
@@ -115,22 +117,35 @@ class STARKProcessing(BaseProcessing):
                 return data
 
             # Crop image region centered at jittered_anno box and get the attention mask
-            crops, boxes, att_mask, mask_crops = prutils.jittered_center_crop(data[s + '_images'], jittered_anno,
-                                                                              data[s + '_anno'], self.search_area_factor[s],
-                                                                              self.output_sz[s], masks=data[s + '_masks'])
+            crops, boxes, att_mask, mask_crops = prutils.jittered_center_crop(
+                data[f'{s}_images'],
+                jittered_anno,
+                data[f'{s}_anno'],
+                self.search_area_factor[s],
+                self.output_sz[s],
+                masks=data[f'{s}_masks'],
+            )
+
             # Apply transforms
-            data[s + '_images'], data[s + '_anno'], data[s + '_att'], data[s + '_masks'] = self.transform[s](
-                image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False)
+            (
+                data[f'{s}_images'],
+                data[f'{s}_anno'],
+                data[f'{s}_att'],
+                data[f'{s}_masks'],
+            ) = self.transform[s](
+                image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False
+            )
+
 
             # 2021.1.9 Check whether elements in data[s + '_att'] is all 1
             # Note that type of data[s + '_att'] is tuple, type of ele is torch.tensor
-            for ele in data[s + '_att']:
+            for ele in data[f'{s}_att']:
                 if (ele == 1).all():
                     data['valid'] = False
                     # print("Values of original attention mask are all one. Replace it with new data.")
                     return data
             # 2021.1.10 more strict conditions: require the donwsampled masks not to be all 1
-            for ele in data[s + '_att']:
+            for ele in data[f'{s}_att']:
                 feat_size = self.output_sz[s] // 16  # 16 is the backbone stride
                 # (1,1,128,128) (1,1,256,256) --> (1,1,8,8) (1,1,16,16)
                 mask_down = F.interpolate(ele[None, None].float(), size=feat_size).to(torch.bool)[0]

@@ -25,9 +25,6 @@ def single_gpu_test(model,
         for k, v in result.items():
             results[k].append(v)
 
-        if show or out_dir:
-            pass  # TODO
-
         batch_size = data['img'][0].size(0)
         for _ in range(batch_size):
             prog_bar.update()
@@ -103,16 +100,14 @@ def collect_results_cpu(result_part, size, tmpdir=None):
     # dump the part result to the dir
     mmcv.dump(result_part, osp.join(tmpdir, f'part_{rank}.pkl'))
     dist.barrier()
-    # collect all parts
     if rank != 0:
         return None
-    else:
-        # load results of all parts from tmp dir
-        part_list = defaultdict(list)
-        for i in range(world_size):
-            part_file = osp.join(tmpdir, f'part_{i}.pkl')
-            part_file = mmcv.load(part_file)
-            for k, v in part_file.items():
-                part_list[k].extend(v)
-        shutil.rmtree(tmpdir)
-        return part_list
+    # load results of all parts from tmp dir
+    part_list = defaultdict(list)
+    for i in range(world_size):
+        part_file = osp.join(tmpdir, f'part_{i}.pkl')
+        part_file = mmcv.load(part_file)
+        for k, v in part_file.items():
+            part_list[k].extend(v)
+    shutil.rmtree(tmpdir)
+    return part_list

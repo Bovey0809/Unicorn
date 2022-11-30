@@ -36,10 +36,10 @@ class Davis(VOSDatasetBase):
             elif split in ['test-dev']:
                 root = env_settings().davis_testdev_dir if root is None else root
             else:
-                raise Exception('Unknown split {}'.format(split))
+                raise Exception(f'Unknown split {split}')
         else:
             root = env_settings().davis16_dir if root is None else root
-            
+
         super().__init__(name='DAVIS', root=Path(root), version=version, split=split, multiobj=multiobj,
                          vis_threshold=vis_threshold, image_loader=image_loader)
 
@@ -56,7 +56,7 @@ class Davis(VOSDatasetBase):
 
         if sequences is None:
             if self.split != 'all':
-                fname = dset_path / 'ImageSets' / self.version / (self.split + '.txt')
+                fname = dset_path / 'ImageSets' / self.version / f'{self.split}.txt'
                 sequences = open(fname).read().splitlines()
             else:
                 sequences = [p for p in sorted(self._jpeg_path.glob("*")) if p.is_dir()]
@@ -71,7 +71,7 @@ class Davis(VOSDatasetBase):
             else:  # One object per sample
                 self._samples.extend([(seq, [obj_id]) for obj_id in obj_ids])
 
-        print("%s loaded." % self.get_name())
+        print(f"{self.get_name()} loaded.")
 
     def _construct_sequence(self, sequence_info):
 

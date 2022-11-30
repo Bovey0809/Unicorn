@@ -22,10 +22,7 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None, 
         cv image - extracted crop
         float - the factor by which the crop has been resized to make the crop size equal output_size
     """
-    if not isinstance(target_bb, list):
-        x, y, w, h = target_bb.tolist()
-    else:
-        x, y, w, h = target_bb
+    x, y, w, h = target_bb if isinstance(target_bb, list) else target_bb.tolist()
     # Crop image
     crop_sz = math.ceil(math.sqrt(w * h) * search_area_factor)
 
@@ -66,20 +63,26 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None, 
     if mask is not None:
         mask_crop_padded = F.pad(mask_crop, pad=(x1_pad, x2_pad, y1_pad, y2_pad), mode='constant', value=0)
 
-    if output_sz is not None:
-        resize_factor = output_sz / crop_sz
-        im_crop_padded = cv.resize(im_crop_padded, (output_sz, output_sz))
-        att_mask = cv.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
-        if mask is None:
-            return im_crop_padded, resize_factor, att_mask
-        mask_crop_padded = \
-        F.interpolate(mask_crop_padded[None, None], (output_sz, output_sz), mode='bilinear', align_corners=False)[0, 0]
-        return im_crop_padded, resize_factor, att_mask, mask_crop_padded
+    if output_sz is None:
+        return (
+            (im_crop_padded, att_mask.astype(np.bool_), 1.0)
+            if mask is None
+            else (
+                im_crop_padded,
+                1.0,
+                att_mask.astype(np.bool_),
+                mask_crop_padded,
+            )
+        )
 
-    else:
-        if mask is None:
-            return im_crop_padded, att_mask.astype(np.bool_), 1.0
-        return im_crop_padded, 1.0, att_mask.astype(np.bool_), mask_crop_padded
+    resize_factor = output_sz / crop_sz
+    im_crop_padded = cv.resize(im_crop_padded, (output_sz, output_sz))
+    att_mask = cv.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)
+    if mask is None:
+        return im_crop_padded, resize_factor, att_mask
+    mask_crop_padded = \
+    F.interpolate(mask_crop_padded[None, None], (output_sz, output_sz), mode='bilinear', align_corners=False)[0, 0]
+    return im_crop_padded, resize_factor, att_mask, mask_crop_padded
 
 
 def transform_image_to_crop(box_in: torch.Tensor, box_extract: torch.Tensor, resize_factor: float,
@@ -94,18 +97,15 @@ def transform_image_to_crop(box_in: torch.Tensor, box_extract: torch.Tensor, res
     returns:
         torch.Tensor - transformed co-ordinates of box_in
     """
-    box_extract_center = box_extract[0:2] + 0.5 * box_extract[2:4]
+    box_extract_center = box_extract[:2] + 0.5 * box_extract[2:4]
 
-    box_in_center = box_in[0:2] + 0.5 * box_in[2:4]
+    box_in_center = box_in[:2] + 0.5 * box_in[2:4]
 
     box_out_center = (crop_sz - 1) / 2 + (box_in_center - box_extract_center) * resize_factor
     box_out_wh = box_in[2:4] * resize_factor
 
     box_out = torch.cat((box_out_center - 0.5 * box_out_wh, box_out_wh))
-    if normalize:
-        return box_out / crop_sz[0]
-    else:
-        return box_out
+    return box_out / crop_sz[0] if normalize else box_out
 
 
 def jittered_center_crop(frames, box_extract, box_gt, search_area_factor, output_sz, masks=None):
@@ -164,8 +164,5 @@ def transform_box_to_crop(box: torch.Tensor, crop_box: torch.Tensor, crop_sz: to
 
     box_out[:2] *= scale_factor
     box_out[2:] *= scale_factor
-    if normalize:
-        return box_out / crop_sz[0]
-    else:
-        return box_out
+    return box_out / crop_sz[0] if normalize else box_out
 

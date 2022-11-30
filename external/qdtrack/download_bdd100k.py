@@ -2,7 +2,7 @@ import os
 import multiprocessing
 
 def download(url):
-    os.system("wget -c %s" % url)
+    os.system(f"wget -c {url}")
 
 if __name__ == "__main__":
     save_dir = "/opt/tiger/yanbin/BDD100K"

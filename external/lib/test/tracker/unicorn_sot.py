@@ -15,7 +15,7 @@ class UnicornSOTTrack(BaseTracker):
         super(UnicornSOTTrack, self).__init__(params)
         """ model config """
         self.num_classes = 1
-        exp_file_name = "exps/default/%s"%params.exp_name
+        exp_file_name = f"exps/default/{params.exp_name}"
         exp = get_exp(exp_file_name, None)
         self.normalize = exp.normalize
         self.exp_name = params.exp_name
@@ -50,7 +50,7 @@ class UnicornSOTTrack(BaseTracker):
         self.dh, self.dw = self.out_dict_pre["h"] * 2, self.out_dict_pre["w"] * 2  # STRIDE = 8
         """get initial label mask (K, H/8*W/8)"""
         self.lbs_pre = F.interpolate(get_label_map(init_box_rsz, self.input_size[0], self.input_size[1]) \
-            , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
+                , scale_factor=1/8, mode="bilinear", align_corners=False)[0].flatten(-2).to(self.device) # (1, H/8*W/8)
         # save states
         self.state = info['init_bbox']
     

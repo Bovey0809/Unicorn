@@ -77,7 +77,7 @@ def multi_gpu_test_omni(model, data_loader, exp, tracker_cfg, tmpdir=None, gpu_c
                 head = model.module.head
                 if getattr(exp, "use_raft", False):
                     outputs, locations, dynamic_params, fpn_levels, mask_feats, up_masks = det_outputs
-                    up_mask_b = up_masks[0:1] # assume batch size = 1
+                    up_mask_b = up_masks[:1]
                     outputs, outputs_mask = postprocess_inst(
                         outputs, locations, dynamic_params, fpn_levels, mask_feats, head.mask_head,
                         exp.num_classes, exp.test_conf, exp.nmsthre, class_agnostic=False, up_masks=up_mask_b, d_rate=exp.d_rate)
@@ -145,9 +145,7 @@ def multi_gpu_test_omni(model, data_loader, exp, tracker_cfg, tmpdir=None, gpu_c
                     masks_full[:, :tmp_h, :tmp_w] = masks[:, :tmp_h, :tmp_w]
                     masks_full_new = masks_full[indexs]
                     masks_np = masks_full_new.cpu().numpy()
-                    result = {}
-                    result["track_result"] = segtrack2result(track_bboxes, labels, masks_np, ids)
-
+                    result = {"track_result": segtrack2result(track_bboxes, labels, masks_np, ids)}
                     if 'track_result' in result:
                         result['track_result'] = (
                             encode_track_results(result['track_result']))
@@ -169,16 +167,19 @@ def multi_gpu_test_omni(model, data_loader, exp, tracker_cfg, tmpdir=None, gpu_c
                     bbox_result = bbox2result(det_bboxes, det_labels, exp.num_classes)
                     track_result = track2result(track_bboxes, labels, ids, exp.num_classes)
                     result = dict(bbox_results=bbox_result, track_results=track_result)
+            elif mots:
+                track_result = defaultdict(list)
+                bbox_result = bbox2result(np.zeros((0, 5)), None, exp.num_classes)
+                segm_result = [[] for _ in range(exp.num_classes)]
+                result = {"track_result": track_result, "bbox_result": bbox_result, "segm_result": segm_result}
             else:
-                if mots:
-                    track_result = defaultdict(list)
-                    bbox_result = bbox2result(np.zeros((0, 5)), None, exp.num_classes)
-                    segm_result = [[] for _ in range(exp.num_classes)]
-                    result = {"track_result": track_result, "bbox_result": bbox_result, "segm_result": segm_result}
-                else:
-                    bbox_result = bbox2result(np.zeros((0, 5)), None, exp.num_classes)
-                    track_result = [np.zeros((0, 6), dtype=np.float32) for i in range(exp.num_classes)]
-                    result = dict(bbox_results=bbox_result, track_results=track_result)
+                bbox_result = bbox2result(np.zeros((0, 5)), None, exp.num_classes)
+                track_result = [
+                    np.zeros((0, 6), dtype=np.float32)
+                    for _ in range(exp.num_classes)
+                ]
+
+                result = dict(bbox_results=bbox_result, track_results=track_result)
         for k, v in result.items():
             results[k].append(v)
 
@@ -218,19 +219,17 @@ def collect_results_cpu(result_part, size, tmpdir=None):
     # dump the part result to the dir
     mmcv.dump(result_part, osp.join(tmpdir, f'part_{rank}.pkl'))
     dist.barrier()
-    # collect all parts
     if rank != 0:
         return None
-    else:
-        # load results of all parts from tmp dir
-        part_list = defaultdict(list)
-        for i in range(world_size):
-            part_file = osp.join(tmpdir, f'part_{i}.pkl')
-            part_file = mmcv.load(part_file)
-            for k, v in part_file.items():
-                part_list[k].extend(v)
-        shutil.rmtree(tmpdir)
-        return part_list
+    # load results of all parts from tmp dir
+    part_list = defaultdict(list)
+    for i in range(world_size):
+        part_file = osp.join(tmpdir, f'part_{i}.pkl')
+        part_file = mmcv.load(part_file)
+        for k, v in part_file.items():
+            part_list[k].extend(v)
+    shutil.rmtree(tmpdir)
+    return part_list
 
 
 def preprocess(data, input_size):
@@ -279,7 +278,6 @@ def get_ori_img(data):
     img = np.ascontiguousarray(img)
     # get the original size and the original image (without padding)
     ori_H, ori_W, _ = data["img_metas"][0].data[0][0]["ori_shape"]
-    img_ori = img[:ori_H, :ori_W, :]
-    return img_ori
+    return img[:ori_H, :ori_W, :]
 
 

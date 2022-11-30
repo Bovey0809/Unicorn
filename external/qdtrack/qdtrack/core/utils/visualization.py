@@ -15,8 +15,7 @@ def random_color(seed):
     """Random a color according to the input seed."""
     random.seed(seed)
     colors = sns.color_palette()
-    color = random.choice(colors)
-    return color
+    return random.choice(colors)
 
 
 def imshow_tracks(*args, backend='cv2', **kwargs):
@@ -107,13 +106,9 @@ def _plt_show_tracks(img,
     assert labels.ndim == 1
     assert ids.ndim == 1
     assert bboxes.shape[0] == ids.shape[0]
-    assert bboxes.shape[1] == 4 or bboxes.shape[1] == 5
+    assert bboxes.shape[1] in [4, 5]
 
-    if isinstance(img, str):
-        img = plt.imread(img)
-    else:
-        img = mmcv.bgr2rgb(img)
-
+    img = plt.imread(img) if isinstance(img, str) else mmcv.bgr2rgb(img)
     img_shape = img.shape
     bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, img_shape[1])
     bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, img_shape[0])

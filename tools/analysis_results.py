@@ -13,9 +13,7 @@ def parse_args():
     # for evaluation
     parser.add_argument('--name', type=str, help='model name')
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 if __name__ == "__main__":
     trackers = []

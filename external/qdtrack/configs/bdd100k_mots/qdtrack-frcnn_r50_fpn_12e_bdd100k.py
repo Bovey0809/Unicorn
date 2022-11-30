@@ -160,8 +160,6 @@ model = dict(
                 max_per_img=100))
 )
 
-# dataset settings
-dataset_type = 'BDDVideoDataset'
 data_root = 'data/bdd/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
@@ -194,35 +192,41 @@ test_pipeline = [
         ])
 ]
 
+dataset_type = 'BDDVideoDataset'
 data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,
     train=[
         dict(
             type=dataset_type,
-            ann_file=data_root +
-            'labels/box_track_20/box_track_train_cocofmt.json',
-            img_prefix=data_root + 'images/track/train/',
+            ann_file=f'{data_root}labels/box_track_20/box_track_train_cocofmt.json',
+            img_prefix=f'{data_root}images/track/train/',
             key_img_sampler=dict(interval=1),
             ref_img_sampler=dict(num_ref_imgs=1, scope=3, method='uniform'),
-            pipeline=train_pipeline),
+            pipeline=train_pipeline,
+        ),
         dict(
             type=dataset_type,
             load_as_video=False,
-            ann_file=data_root + 'labels/det_20/det_train_cocofmt.json',
-            img_prefix=data_root + 'images/100k/train/',
-            pipeline=train_pipeline)
+            ann_file=f'{data_root}labels/det_20/det_train_cocofmt.json',
+            img_prefix=f'{data_root}images/100k/train/',
+            pipeline=train_pipeline,
+        ),
     ],
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'labels/box_track_20/box_track_val_cocofmt.json',
-        img_prefix=data_root + 'images/track/val/',
-        pipeline=test_pipeline),
+        ann_file=f'{data_root}labels/box_track_20/box_track_val_cocofmt.json',
+        img_prefix=f'{data_root}images/track/val/',
+        pipeline=test_pipeline,
+    ),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'labels/box_track_20/box_track_val_cocofmt.json',
-        img_prefix=data_root + 'images/track/val/',
-        pipeline=test_pipeline))
+        ann_file=f'{data_root}labels/box_track_20/box_track_val_cocofmt.json',
+        img_prefix=f'{data_root}images/track/val/',
+        pipeline=test_pipeline,
+    ),
+)
+
 # optimizer
 optimizer = dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)

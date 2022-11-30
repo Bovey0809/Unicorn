@@ -14,7 +14,10 @@ if __name__ == "__main__":
     """Build a mapping between image_id and instances"""
     args = parse_args()
     coco_root = args.coco_root
-    json_path = os.path.join(coco_root, 'annotations/instances_%s2017.json' % args.set)
+    json_path = os.path.join(
+        coco_root, f'annotations/instances_{args.set}2017.json'
+    )
+
     with open(json_path) as f:
         data = json.load(f)
     images_list = data['images']  # length 118287
@@ -33,6 +36,9 @@ if __name__ == "__main__":
         if id not in result:
             result[id] = []
     """save results"""
-    result_path = os.path.join(coco_root, 'annotations/instances_%s2017_image_anno.json' % args.set)
+    result_path = os.path.join(
+        coco_root, f'annotations/instances_{args.set}2017_image_anno.json'
+    )
+
     with open(result_path, "w") as f_w:
         json.dump(result, f_w)

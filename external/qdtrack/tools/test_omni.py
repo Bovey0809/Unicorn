@@ -89,10 +89,6 @@ def main():
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
 
-    # if cfg.get('USE_MMDET', False):
-        # from mmdet.apis import multi_gpu_test, single_gpu_test
-        # from mmdet.models import build_detector as build_model
-        # from mmdet.datasets import build_dataloader
     # else:
     # from qdtrack.apis import multi_gpu_test, single_gpu_test
     from qdtrack.apis import multi_gpu_test_omni
@@ -122,7 +118,10 @@ def main():
         shuffle=False)
 
     # build the model and load checkpoint
-    exp_file_name = os.path.join(get_unicorn_datadir(), "../exps/default/%s"%args.exp_name)
+    exp_file_name = os.path.join(
+        get_unicorn_datadir(), f"../exps/default/{args.exp_name}"
+    )
+
     exp = get_exp(exp_file_name, None)
     """ build network and load state dict"""
     model = exp.get_model(load_pretrain=False)
@@ -131,16 +130,12 @@ def main():
 
     if not distributed:
         raise ValueError("Non-distributed is not ready")
-        model = MMDataParallel(model, device_ids=[0])
-        outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
-                                  args.show_score_thr)
-    else:
-        model = MMDistributedDataParallel(
-            model.cuda(),
-            device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False)
-        outputs = multi_gpu_test_omni(model, data_loader, exp, cfg.model.tracker, \
-            args.tmpdir, args.gpu_collect, mots=args.mots)
+    model = MMDistributedDataParallel(
+        model.cuda(),
+        device_ids=[torch.cuda.current_device()],
+        broadcast_buffers=False)
+    outputs = multi_gpu_test_omni(model, data_loader, exp, cfg.model.tracker, \
+        args.tmpdir, args.gpu_collect, mots=args.mots)
 
     rank, _ = get_dist_info()
     if rank == 0:

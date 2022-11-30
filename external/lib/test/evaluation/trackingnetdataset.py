@@ -24,7 +24,7 @@ class TrackingNetDataset(BaseDataset):
             if sets == 'TEST':
                 sets = ['TEST']
             elif sets == 'TRAIN':
-                sets = ['TRAIN_{}'.format(i) for i in range(5)]
+                sets = [f'TRAIN_{i}' for i in range(5)]
 
         self.sequence_list = self._list_sequences(self.base_path, sets)
 
@@ -32,11 +32,14 @@ class TrackingNetDataset(BaseDataset):
         return SequenceList([self._construct_sequence(set, seq_name) for set, seq_name in self.sequence_list])
 
     def _construct_sequence(self, set, sequence_name):
-        anno_path = '{}/{}/anno/{}.txt'.format(self.base_path, set, sequence_name)
+        anno_path = f'{self.base_path}/{set}/anno/{sequence_name}.txt'
 
-        ground_truth_rect = load_text(str(anno_path), delimiter=',', dtype=np.float64, backend='numpy')
+        ground_truth_rect = load_text(
+            anno_path, delimiter=',', dtype=np.float64, backend='numpy'
+        )
 
-        frames_path = '{}/{}/frames/{}'.format(self.base_path, set, sequence_name)
+
+        frames_path = f'{self.base_path}/{set}/frames/{sequence_name}'
         frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".jpg")]
         frame_list.sort(key=lambda f: int(f[:-4]))
         frames_list = [os.path.join(frames_path, frame) for frame in frame_list]

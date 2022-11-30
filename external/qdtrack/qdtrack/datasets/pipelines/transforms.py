@@ -134,10 +134,7 @@ class SeqRandomCrop(object):
 
         for key in results.get('img_fields', ['img']):
             img = results[key]
-            if offsets is not None:
-                offset_h, offset_w = offsets
-            else:
-                offset_h, offset_w = self.get_offsets(img)
+            offset_h, offset_w = offsets if offsets is not None else self.get_offsets(img)
             results['img_info']['crop_offsets'] = (offset_h, offset_w)
             crop_y1, crop_y2 = offset_h, offset_h + self.crop_size[0]
             crop_x1, crop_x2 = offset_w, offset_w + self.crop_size[1]
@@ -184,11 +181,7 @@ class SeqRandomCrop(object):
         return results
 
     def __call__(self, results):
-        if self.share_params:
-            offsets = self.get_offsets(results[0]['img'])
-        else:
-            offsets = None
-
+        offsets = self.get_offsets(results[0]['img']) if self.share_params else None
         outs = []
         for _results in results:
             _results = self.random_crop(_results, offsets)
@@ -232,13 +225,14 @@ class SeqPhotoMetricDistortion(object):
         self.hue_delta = hue_delta
 
     def get_params(self):
-        params = dict()
-        # delta
-        if np.random.randint(2):
-            params['delta'] = np.random.uniform(-self.brightness_delta,
-                                                self.brightness_delta)
-        else:
-            params['delta'] = None
+        params = {
+            'delta': np.random.uniform(
+                -self.brightness_delta, self.brightness_delta
+            )
+            if np.random.randint(2)
+            else None
+        }
+
         # mode
         mode = np.random.randint(2)
         params['contrast_first'] = True if mode == 1 else 0
@@ -279,20 +273,19 @@ class SeqPhotoMetricDistortion(object):
 
         if 'img_fields' in results:
             assert results['img_fields'] == ['img'], \
-                'Only single img_fields is allowed'
+                    'Only single img_fields is allowed'
         img = results['img']
         assert img.dtype == np.float32, \
-            'PhotoMetricDistortion needs the input image of dtype np.float32,'\
-            ' please set "to_float32=True" in "LoadImageFromFile" pipeline'
+                'PhotoMetricDistortion needs the input image of dtype np.float32,'\
+                ' please set "to_float32=True" in "LoadImageFromFile" pipeline'
         # random brightness
         if params['delta'] is not None:
             img += params['delta']
 
         # mode == 0 --> do random contrast first
         # mode == 1 --> do random contrast last
-        if params['contrast_first']:
-            if params['alpha'] is not None:
-                img *= params['alpha']
+        if params['contrast_first'] and params['alpha'] is not None:
+            img *= params['alpha']
 
         # convert color from BGR to HSV
         img = mmcv.bgr2hsv(img)
@@ -311,9 +304,8 @@ class SeqPhotoMetricDistortion(object):
         img = mmcv.hsv2bgr(img)
 
         # random contrast
-        if not params['contrast_first']:
-            if params['alpha'] is not None:
-                img *= params['alpha']
+        if not params['contrast_first'] and params['alpha'] is not None:
+            img *= params['alpha']
 
         # randomly swap channels
         if params['permutation'] is not None:
@@ -323,11 +315,7 @@ class SeqPhotoMetricDistortion(object):
         return results
 
     def __call__(self, results):
-        if self.share_params:
-            params = self.get_params()
-        else:
-            params = None
-
+        params = self.get_params() if self.share_params else None
         outs = []
         for _results in results:
             _results = self.photo_metric_distortion(_results, params)
