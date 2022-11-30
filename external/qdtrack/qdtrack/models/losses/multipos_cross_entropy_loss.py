@@ -57,13 +57,12 @@ class MultiPosCrossEntropyLoss(nn.Module):
                 **kwargs):
         assert cls_score.size() == label.size()
         assert reduction_override in (None, 'none', 'mean', 'sum')
-        reduction = (
-            reduction_override if reduction_override else self.reduction)
-        loss_cls = self.loss_weight * multi_pos_cross_entropy(
+        reduction = reduction_override or self.reduction
+        return self.loss_weight * multi_pos_cross_entropy(
             cls_score,
             label,
             weight,
             reduction=reduction,
             avg_factor=avg_factor,
-            **kwargs)
-        return loss_cls
+            **kwargs
+        )

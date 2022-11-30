@@ -89,11 +89,11 @@ class QuasiDenseEmbedHead(nn.Module):
 
     def forward(self, x):
         if self.num_convs > 0:
-            for i, conv in enumerate(self.convs):
+            for conv in self.convs:
                 x = conv(x)
         x = x.view(x.size(0), -1)
         if self.num_fcs > 0:
-            for i, fc in enumerate(self.fcs):
+            for fc in self.fcs:
                 x = self.relu(fc(x))
         x = self.fc_embed(x)
         return x
@@ -141,8 +141,6 @@ class QuasiDenseEmbedHead(nn.Module):
         return dists, cos_dists
 
     def loss(self, dists, cos_dists, targets, weights):
-        losses = dict()
-
         loss_track = 0.
         loss_track_aux = 0.
         for _dists, _cos_dists, _targets, _weights in zip(
@@ -151,8 +149,7 @@ class QuasiDenseEmbedHead(nn.Module):
                 _dists, _targets, _weights, avg_factor=_weights.sum())
             if self.loss_track_aux is not None:
                 loss_track_aux += self.loss_track_aux(_cos_dists, _targets)
-        losses['loss_track'] = loss_track / len(dists)
-
+        losses = {'loss_track': loss_track / len(dists)}
         if self.loss_track_aux is not None:
             losses['loss_track_aux'] = loss_track_aux / len(dists)
 

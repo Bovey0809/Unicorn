@@ -21,7 +21,7 @@ if __name__ == '__main__':
             data_path = os.path.join(DATA_PATH, 'test')
         else:
             data_path = os.path.join(DATA_PATH, 'train')
-        out_path = os.path.join(OUT_PATH, '{}.json'.format(split))
+        out_path = os.path.join(OUT_PATH, f'{split}.json')
         out = {'images': [], 'annotations': [], 'videos': [],
                'categories': [{'id': 1, 'name': 'pedestrian'}]}
         seqs = os.listdir(data_path)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
                               'video_id': video_cnt,
                               'height': height, 'width': width}
                 out['images'].append(image_info)
-            print('{}: {} images'.format(seq, num_images))
+            print(f'{seq}: {num_images} images')
             if split != 'test':
                 with open(ann_path, "r") as f:
                     for line in f:
@@ -81,5 +81,8 @@ if __name__ == '__main__':
                             'area': float(w * h)}
                         out['annotations'].append(ann)
             image_cnt += num_images
-        print('loaded {} for {} images and {} samples'.format(split, len(out['images']), len(out['annotations'])))
+        print(
+            f"loaded {split} for {len(out['images'])} images and {len(out['annotations'])} samples"
+        )
+
         json.dump(out, open(out_path, 'w'))

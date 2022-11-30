@@ -78,23 +78,16 @@ class TrackingSampler(torch.utils.data.Dataset):
         # get valid ids
         if force_invisible:
             valid_ids = [i for i in range(min_id, max_id) if not visible[i]]
+        elif allow_invisible:
+            valid_ids = list(range(min_id, max_id))
         else:
-            if allow_invisible:
-                valid_ids = [i for i in range(min_id, max_id)]
-            else:
-                valid_ids = [i for i in range(min_id, max_id) if visible[i]]
+            valid_ids = [i for i in range(min_id, max_id) if visible[i]]
 
         # No visible ids
-        if len(valid_ids) == 0:
-            return None
-
-        return random.sample(valid_ids, num_ids) # without replacement
+        return random.sample(valid_ids, num_ids) if valid_ids else None
 
     def __getitem__(self, index):
-        if self.train_cls:
-            return self.getitem_cls()
-        else:
-            return self.getitem()
+        return self.getitem_cls() if self.train_cls else self.getitem()
 
     def getitem(self):
         """

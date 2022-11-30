@@ -35,8 +35,7 @@ def parse_args():
         action=DictAction,
         help='override some settings in the used config, the key-value pair '
         'in xxx=yyy format will be merged into config file.')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():

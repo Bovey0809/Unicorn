@@ -22,9 +22,7 @@ def parse_args():
     parser.add_argument('--nnodes', type=int, help="the total number of nodes")
     parser.add_argument('--node_rank', type=int, help="the rank of the current node")
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 def _get_rand_port():
@@ -39,12 +37,9 @@ def main():
     prj_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(prj_dir)
     # Get port
-    if args.port > 0:
-        master_port = args.port
-    else:  # This reduce the conflict possibility, but the port availablity is not guaranteed.
-        master_port = _get_rand_port()
+    master_port = args.port if args.port > 0 else _get_rand_port()
     # train
-    file_name = "exps/default/%s" % args.name
+    file_name = f"exps/default/{args.name}"
     if args.mode == "multiple":
         train_cmd = "python3 tools/train.py -f %s -d %d -b %d -o --resume" % (file_name, args.nproc_per_node, args.batch)
     elif args.mode == "distribute":

@@ -25,8 +25,8 @@ class TC128Dataset(BaseDataset):
 
     def _construct_sequence(self, sequence_name):
         if isinstance(sequence_name, six.string_types):
-            if not sequence_name in self.seq_names:
-                raise Exception('Sequence {} not found.'.format(sequence_name))
+            if sequence_name not in self.seq_names:
+                raise Exception(f'Sequence {sequence_name} not found.')
             index = self.seq_names.index(sequence_name)
         # load valid frame range
         frames = np.loadtxt(self.range_files[index], dtype=int, delimiter=',')

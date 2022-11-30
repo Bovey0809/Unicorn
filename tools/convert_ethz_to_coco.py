@@ -5,7 +5,7 @@ from PIL import Image
 
 DATA_PATH = 'datasets/ETHZ/'
 DATA_FILE_PATH = 'datasets/data_path/eth.train'
-OUT_PATH = DATA_PATH + 'annotations/'
+OUT_PATH = f'{DATA_PATH}annotations/'
 
 def load_paths(data_path):
     with open(data_path, 'r') as file:
@@ -19,14 +19,12 @@ if __name__ == '__main__':
     if not os.path.exists(OUT_PATH):
         os.mkdir(OUT_PATH)
 
-    out_path = OUT_PATH + 'train.json'
+    out_path = f'{OUT_PATH}train.json'
     out = {'images': [], 'annotations': [], 'categories': [{'id': 1, 'name': 'person'}]}
     img_paths, label_paths = load_paths(DATA_FILE_PATH)
-    image_cnt = 0
     ann_cnt = 0
     video_cnt = 0
-    for img_path, label_path in zip(img_paths, label_paths):
-        image_cnt += 1
+    for image_cnt, (img_path, label_path) in enumerate(zip(img_paths, label_paths), start=1):
         im = Image.open(os.path.join("datasets", img_path))
         image_info = {'file_name': img_path, 
                         'id': image_cnt,
@@ -55,5 +53,8 @@ if __name__ == '__main__':
                     'area': fbox[2] * fbox[3],
                     'iscrowd': 0}
             out['annotations'].append(ann)
-    print('loaded train for {} images and {} samples'.format(len(out['images']), len(out['annotations'])))
+    print(
+        f"loaded train for {len(out['images'])} images and {len(out['annotations'])} samples"
+    )
+
     json.dump(out, open(out_path, 'w'))

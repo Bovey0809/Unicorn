@@ -68,7 +68,7 @@ class Sequence:
                     else:
                         init_val['bbox'] = list(init_val['bbox'])
         else:
-            init_data = {0: dict()}     # Assume start from frame 0
+            init_data = {0: {}}
 
             if self.object_ids is not None:
                 init_data[0]['object_ids'] = self.object_ids
@@ -79,10 +79,11 @@ class Sequence:
                     init_data[0]['bbox'] = OrderedDict({obj_id: list(gt[0,:]) for obj_id, gt in self.ground_truth_rect.items()})
                 else:
                     assert self.object_ids is None or len(self.object_ids) == 1
-                    if isinstance(self.ground_truth_rect, (dict, OrderedDict)):
-                        init_data[0]['bbox'] = list(self.ground_truth_rect[self.object_ids[0]][0, :])
-                    else:
-                        init_data[0]['bbox'] = list(self.ground_truth_rect[0,:])
+                    init_data[0]['bbox'] = (
+                        list(self.ground_truth_rect[self.object_ids[0]][0, :])
+                        if isinstance(self.ground_truth_rect, (dict, OrderedDict))
+                        else list(self.ground_truth_rect[0, :])
+                    )
 
             if self.ground_truth_seg is not None:
                 init_data[0]['mask'] = self.ground_truth_seg[0]
@@ -90,12 +91,10 @@ class Sequence:
         return init_data
 
     def init_info(self):
-        info = self.frame_info(frame_num=0)
-        return info
+        return self.frame_info(frame_num=0)
 
     def frame_info(self, frame_num):
-        info = self.object_init_data(frame_num=frame_num)
-        return info
+        return self.object_init_data(frame_num=frame_num)
 
     def init_bbox(self, frame_num=0):
         return self.object_init_data(frame_num=frame_num).get('init_bbox')
@@ -104,7 +103,7 @@ class Sequence:
         return self.object_init_data(frame_num=frame_num).get('init_mask')
 
     def get_info(self, keys, frame_num=None):
-        info = dict()
+        info = {}
         for k in keys:
             val = self.get(k, frame_num=frame_num)
             if val is not None:
@@ -115,13 +114,13 @@ class Sequence:
         if frame_num is None:
             frame_num = 0
         if frame_num not in self.init_data:
-            return dict()
+            return {}
 
-        init_data = dict()
-        for key, val in self.init_data[frame_num].items():
-            if val is None:
-                continue
-            init_data['init_'+key] = val
+        init_data = {
+            f'init_{key}': val
+            for key, val in self.init_data[frame_num].items()
+            if val is not None
+        }
 
         if 'init_mask' in init_data and init_data['init_mask'] is not None:
             anno = imread_indexed(init_data['init_mask'])

@@ -9,8 +9,11 @@ from lib.test.evaluation.environment import env_settings
 def transform_trackingnet(tracker_name, cfg_name):
     env = env_settings()
     result_dir = env.results_path
-    src_dir = os.path.join(result_dir, "%s/%s/trackingnet/" % (tracker_name, cfg_name))
-    dest_dir = os.path.join(result_dir, "%s/%s/trackingnet_submit/" % (tracker_name, cfg_name))
+    src_dir = os.path.join(result_dir, f"{tracker_name}/{cfg_name}/trackingnet/")
+    dest_dir = os.path.join(
+        result_dir, f"{tracker_name}/{cfg_name}/trackingnet_submit/"
+    )
+
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
     items = os.listdir(src_dir)

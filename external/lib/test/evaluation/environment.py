@@ -7,10 +7,10 @@ class EnvSettings:
         test_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         self.prj_dir = ''
         self.data_dir = ''
-        self.results_path = '{}/tracking_results/'.format(test_path)
-        self.segmentation_path = '{}/segmentation_results/'.format(test_path)
-        self.network_path = '{}/networks/'.format(test_path)
-        self.result_plot_path = '{}/result_plots/'.format(test_path)
+        self.results_path = f'{test_path}/tracking_results/'
+        self.segmentation_path = f'{test_path}/segmentation_results/'
+        self.network_path = f'{test_path}/networks/'
+        self.result_plot_path = f'{test_path}/result_plots/'
         self.otb_path = ''
         self.nfs_path = ''
         self.uav_path = ''
@@ -47,9 +47,9 @@ def create_default_local_file():
             attr_val = getattr(settings, attr)
             if not attr.startswith('__') and not callable(attr_val):
                 if comment_str is None:
-                    f.write('    settings.{} = \'{}\'\n'.format(attr, attr_val))
+                    f.write(f"    settings.{attr} = \'{attr_val}\'\n")
                 else:
-                    f.write('    settings.{} = \'{}\'    # {}\n'.format(attr, attr_val, comment_str))
+                    f.write(f"    settings.{attr} = \'{attr_val}\'    # {comment_str}\n")
         f.write('\n    return settings\n\n')
 
 
@@ -98,9 +98,9 @@ def create_default_local_file_test(workspace_dir, data_dir, save_dir):
             attr_val = getattr(settings, attr)
             if not attr.startswith('__') and not callable(attr_val):
                 if comment_str is None:
-                    f.write('    settings.{} = \'{}\'\n'.format(attr, attr_val))
+                    f.write(f"    settings.{attr} = \'{attr_val}\'\n")
                 else:
-                    f.write('    settings.{} = \'{}\'    # {}\n'.format(attr, attr_val, comment_str))
+                    f.write(f"    settings.{attr} = \'{attr_val}\'    # {comment_str}\n")
         f.write('\n    return settings\n\n')
 
 

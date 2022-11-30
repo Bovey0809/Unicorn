@@ -16,7 +16,7 @@ class Results(object):
             sys.stdout.write(sequence + " frame %s not found!\n" % frame_id)
             sys.stdout.write("The frames have to be indexed PNG files placed inside the corespondent sequence "
                              "folder.\nThe indexes have to match with the initial frame.\n")
-            sys.stderr.write("IOError: " + err.strerror + "\n")
+            sys.stderr.write(f"IOError: {err.strerror}" + "\n")
             sys.exit()
 
     def read_masks(self, sequence, masks_id):

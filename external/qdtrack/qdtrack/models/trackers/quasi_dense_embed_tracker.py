@@ -37,12 +37,12 @@ class QuasiDenseEmbedTracker(object):
         self.match_metric = match_metric
 
         self.num_tracklets = 0
-        self.tracklets = dict()
+        self.tracklets = {}
         self.backdrops = []
 
     @property
     def empty(self):
-        return False if self.tracklets else True
+        return not self.tracklets
 
     def update_memo(self, ids, bboxes, embeds, labels, frame_id):
         tracklet_inds = ids > -1
@@ -91,10 +91,12 @@ class QuasiDenseEmbedTracker(object):
                 labels=labels[backdrop_inds]))
 
         # pop memo
-        invalid_ids = []
-        for k, v in self.tracklets.items():
-            if frame_id - v['last_frame'] >= self.memo_tracklet_frames:
-                invalid_ids.append(k)
+        invalid_ids = [
+            k
+            for k, v in self.tracklets.items()
+            if frame_id - v['last_frame'] >= self.memo_tracklet_frames
+        ]
+
         for invalid_id in invalid_ids:
             self.tracklets.pop(invalid_id)
 
@@ -184,15 +186,13 @@ class QuasiDenseEmbedTracker(object):
             for i in range(bboxes.size(0)):
                 conf, memo_ind = torch.max(scores[i, :], dim=0)
                 id = memo_ids[memo_ind]
-                if conf > self.match_score_thr:
-                    if id > -1:
-                        if bboxes[i, -1] > self.obj_score_thr:
-                            ids[i] = id
-                            scores[:i, memo_ind] = 0
-                            scores[i + 1:, memo_ind] = 0
-                        else:
-                            if conf > self.nms_conf_thr:
-                                ids[i] = -2
+                if conf > self.match_score_thr and id > -1:
+                    if bboxes[i, -1] > self.obj_score_thr:
+                        ids[i] = id
+                        scores[:i, memo_ind] = 0
+                        scores[i + 1:, memo_ind] = 0
+                    elif conf > self.nms_conf_thr:
+                        ids[i] = -2
         new_inds = (ids == -1) & (bboxes[:, 4] > self.init_score_thr).cpu()
         num_news = new_inds.sum()
         ids[new_inds] = torch.arange(
@@ -202,7 +202,4 @@ class QuasiDenseEmbedTracker(object):
         self.num_tracklets += num_news
 
         self.update_memo(ids, bboxes, embeds, labels, frame_id)
-        if return_index:
-            return bboxes, labels, ids, valids
-        else:
-            return bboxes, labels, ids
+        return (bboxes, labels, ids, valids) if return_index else (bboxes, labels, ids)

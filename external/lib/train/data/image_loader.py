@@ -36,7 +36,7 @@ def jpeg4py_loader(path):
     try:
         return jpeg4py.JPEG(path).decode()
     except Exception as e:
-        print('ERROR: Could not read image "{}"'.format(path))
+        print(f'ERROR: Could not read image "{path}"')
         print(e)
         return None
 
@@ -49,7 +49,7 @@ def opencv_loader(path):
         # convert to rgb and return
         return cv.cvtColor(im, cv.COLOR_BGR2RGB)
     except Exception as e:
-        print('ERROR: Could not read image "{}"'.format(path))
+        print(f'ERROR: Could not read image "{path}"')
         print(e)
         return None
 
@@ -65,7 +65,7 @@ def jpeg4py_loader_w_failsafe(path):
             # convert to rgb and return
             return cv.cvtColor(im, cv.COLOR_BGR2RGB)
         except Exception as e:
-            print('ERROR: Could not read image "{}"'.format(path))
+            print(f'ERROR: Could not read image "{path}"')
             print(e)
             return None
 
@@ -75,7 +75,7 @@ def opencv_seg_loader(path):
     try:
         return cv.imread(path)
     except Exception as e:
-        print('ERROR: Could not read image "{}"'.format(path))
+        print(f'ERROR: Could not read image "{path}"')
         print(e)
         return None
 
@@ -85,8 +85,7 @@ def imread_indexed(filename):
 
     im = Image.open(filename)
 
-    annotation = np.atleast_3d(im)[...,0]
-    return annotation
+    return np.atleast_3d(im)[...,0]
 
 
 def imwrite_indexed(filename, array, color_palette=None):

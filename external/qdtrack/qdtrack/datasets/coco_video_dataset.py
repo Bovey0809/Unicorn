@@ -32,11 +32,11 @@ class CocoVideoDataset(CocoDataset):
 
     def load_annotations(self, ann_file):
         """Load annotation from annotation file."""
-        if not self.load_as_video:
-            data_infos = super().load_annotations(ann_file)
-        else:
-            data_infos = self.load_video_anns(ann_file)
-        return data_infos
+        return (
+            self.load_video_anns(ann_file)
+            if self.load_as_video
+            else super().load_annotations(ann_file)
+        )
 
     def load_video_anns(self, ann_file):
         self.coco = CocoVID(ann_file)
@@ -265,7 +265,7 @@ class CocoVideoDataset(CocoDataset):
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported.')
 
-        eval_results = dict()
+        eval_results = {}
         if 'track' in metrics:
             assert len(self.data_infos) == len(results['track_results'])
             inds = [
@@ -288,18 +288,17 @@ class CocoVideoDataset(CocoDataset):
                 logger=logger,
                 classes=self.CLASSES,
                 **track_kwargs)
-            eval_results.update(track_eval_results)
+            eval_results |= track_eval_results
 
         # evaluate for detectors without tracker
         super_metrics = ['bbox', 'segm']
-        super_metrics = [_ for _ in metrics if _ in super_metrics]
-        if super_metrics:
+        if super_metrics := [_ for _ in metrics if _ in super_metrics]:
             if isinstance(results, dict):
                 if 'bbox' in super_metrics and 'segm' in super_metrics:
-                    super_results = []
-                    for bbox, segm in zip(results['bbox_results'],
-                                          results['segm_results']):
-                        super_results.append((bbox, segm))
+                    super_results = list(
+                        zip(results['bbox_results'], results['segm_results'])
+                    )
+
                 else:
                     super_results = results['bbox_results']
             else:
@@ -325,20 +324,19 @@ class CocoVideoDataset(CocoDataset):
         # evaluate for detectors without tracker
         #mot_class_average=False
         mot_class_average=True
-        eval_results = dict()
+        eval_results = {}
         metrics = metric if isinstance(metric, list) else [metric]
         allowed_metrics = ['bbox', 'segm', 'track', 'segtrack']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
-        
-        super_metrics = ['bbox', 'segm']
-        if super_metrics:
+
+        if super_metrics := ['bbox', 'segm']:
             if 'bbox' in super_metrics and 'segm' in super_metrics:
-                super_results = []
-                for bbox, segm in zip(results['bbox_result'],
-                                      results['segm_result']):
-                    super_results.append((bbox, segm))
+                super_results = list(
+                    zip(results['bbox_result'], results['segm_result'])
+                )
+
             else:
                 super_results = results['bbox_result']
             super_eval_results = super().evaluate(
@@ -349,8 +347,8 @@ class CocoVideoDataset(CocoDataset):
                 proposal_nums=proposal_nums,
                 iou_thrs=iou_thr,
                 metric_items=metric_items)
-            eval_results.update(super_eval_results)
-        
+            eval_results |= super_eval_results
+
         if 'segtrack' in metrics:
             track_eval_results = eval_mots(
                 self.coco,

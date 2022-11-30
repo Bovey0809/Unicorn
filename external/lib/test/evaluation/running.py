@@ -14,9 +14,10 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
     if not os.path.exists(tracker.results_dir):
         print("create tracking result dir:", tracker.results_dir)
         os.makedirs(tracker.results_dir)
-    if seq.dataset in ['trackingnet', 'got10k']:
-        if not os.path.exists(os.path.join(tracker.results_dir, seq.dataset)):
-            os.makedirs(os.path.join(tracker.results_dir, seq.dataset))
+    if seq.dataset in ['trackingnet', 'got10k'] and not os.path.exists(
+        os.path.join(tracker.results_dir, seq.dataset)
+    ):
+        os.makedirs(os.path.join(tracker.results_dir, seq.dataset))
     '''2021.1.5 create new folder for these two datasets'''
     if seq.dataset in ['trackingnet', 'got10k']:
         base_results_path = os.path.join(tracker.results_dir, seq.dataset, seq.name)
@@ -25,7 +26,7 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
     segmentation_path = os.path.join(tracker.segmentation_dir, seq.name)
 
     frame_names = [os.path.splitext(os.path.basename(f))[0] for f in seq.frames]
-    
+
     def save_bb(file, data):
         tracked_bb = np.array(data).astype(int)
         np.savetxt(file, tracked_bb, delimiter='\t', fmt='%d')
@@ -42,7 +43,7 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
         data_dict = {}
         for elem in input_dict:
             for k, v in elem.items():
-                if k in data_dict.keys():
+                if k in data_dict:
                     data_dict[k].append(v)
                 else:
                     data_dict[k] = [v, ]
@@ -100,7 +101,7 @@ def _save_tracker_output(seq: Sequence, tracker: Tracker, output: dict):
             else:
                 timings_file = '{}_time.txt'.format(base_results_path)
                 save_time(timings_file, data)
-        
+
         elif key == 'segmentation':
             assert len(frame_names) == len(data)
             if not os.path.exists(segmentation_path):
@@ -135,14 +136,14 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
             return os.path.exists(mask_dir)
 
     def _det_results_exist():
-        det_results_dir = "/opt/tiger/omnitrack/det/%s" % seq.dataset
+        det_results_dir = f"/opt/tiger/omnitrack/det/{seq.dataset}"
         bbox_file = '{}/{}.txt'.format(det_results_dir, seq.name)
         return os.path.isfile(bbox_file)
 
     if _results_exist() and not debug:
         print('FPS: {}'.format(-1))
         return
-    
+
     # if _det_results_exist() and not debug:
     #     print('FPS: {}'.format(-1))
     #     return
@@ -161,7 +162,7 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
     sys.stdout.flush()
 
     if isinstance(output['time'][0], (dict, OrderedDict)):
-        exec_time = sum([sum(times.values()) for times in output['time']])
+        exec_time = sum(sum(times.values()) for times in output['time'])
         num_frames = len(output['time'])
     else:
         exec_time = sum(output['time'])
@@ -187,17 +188,13 @@ def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8):
 
     multiprocessing.set_start_method('spawn', force=True)
 
-    if threads == 0:
-        mode = 'sequential'
-    else:
-        mode = 'parallel'
-
-    if mode == 'sequential':
-        for seq in dataset:
-            for tracker_info in trackers:
-                run_sequence(seq, tracker_info, debug=debug)
-    elif mode == 'parallel':
+    mode = 'sequential' if threads == 0 else 'parallel'
+    if mode == 'parallel':
         param_list = [(seq, tracker_info, debug, num_gpus) for seq, tracker_info in product(dataset, trackers)]
         with multiprocessing.Pool(processes=threads) as pool:
             pool.starmap(run_sequence, param_list)
+    elif mode == 'sequential':
+        for seq in dataset:
+            for tracker_info in trackers:
+                run_sequence(seq, tracker_info, debug=debug)
     print('Done')

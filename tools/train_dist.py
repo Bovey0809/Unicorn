@@ -34,7 +34,7 @@ def launch(
     dist.init_process_group(backend=backend)
 
     global_rank = dist.get_rank()
-    logger.info("Rank {} initialization finished.".format(global_rank))
+    logger.info(f"Rank {global_rank} initialization finished.")
 
     # Setup the local process group (which contains ranks within the same machine)
     assert comm._LOCAL_PROCESS_GROUP is None

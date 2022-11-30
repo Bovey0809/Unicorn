@@ -8,10 +8,13 @@ from lib.test.evaluation.environment import env_settings
 def parameters(exp_name: str):
     params = TrackerParams()
     prj_dir = env_settings().prj_dir
-    
+
     # search region setting
     params.exp_name = exp_name
     # Network checkpoint path
-    params.checkpoint = os.path.join(prj_dir, "Unicorn_outputs/%s/latest_ckpt.pth"%exp_name)
+    params.checkpoint = os.path.join(
+        prj_dir, f"Unicorn_outputs/{exp_name}/latest_ckpt.pth"
+    )
+
 
     return params

@@ -29,13 +29,13 @@ def ltr_collate(batch):
         if _check_use_shared_memory():
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
-            numel = sum([x.numel() for x in batch])
+            numel = sum(x.numel() for x in batch)
             storage = batch[0].storage()._new_shared(numel)
             out = batch[0].new(storage)
         return torch.stack(batch, 0, out=out)
-        # if batch[0].dim() < 4:
-        #     return torch.stack(batch, 0, out=out)
-        # return torch.cat(batch, 0, out=out)
+            # if batch[0].dim() < 4:
+            #     return torch.stack(batch, 0, out=out)
+            # return torch.cat(batch, 0, out=out)
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
             and elem_type.__name__ != 'string_':
         elem = batch[0]
@@ -80,13 +80,13 @@ def ltr_collate_stack1(batch):
         if _check_use_shared_memory():
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
-            numel = sum([x.numel() for x in batch])
+            numel = sum(x.numel() for x in batch)
             storage = batch[0].storage()._new_shared(numel)
             out = batch[0].new(storage)
         return torch.stack(batch, 1, out=out)
-        # if batch[0].dim() < 4:
-        #     return torch.stack(batch, 0, out=out)
-        # return torch.cat(batch, 0, out=out)
+            # if batch[0].dim() < 4:
+            #     return torch.stack(batch, 0, out=out)
+            # return torch.cat(batch, 0, out=out)
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
             and elem_type.__name__ != 'string_':
         elem = batch[0]

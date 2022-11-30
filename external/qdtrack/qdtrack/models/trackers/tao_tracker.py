@@ -48,7 +48,7 @@ class TaoTracker(object):
 
     def reset(self):
         self.num_tracklets = 0
-        self.tracklets = dict()
+        self.tracklets = {}
         # for analysis
         self.pred_tracks = defaultdict(lambda: defaultdict(list))
         self.gt_tracks = defaultdict(lambda: defaultdict(list))
@@ -62,7 +62,7 @@ class TaoTracker(object):
 
     @property
     def empty(self):
-        return False if self.tracklets else True
+        return not self.tracklets
 
     def update_memo(self, ids, bboxes, labels, embeds, frame_id):
         tracklet_inds = ids > -1
@@ -88,10 +88,12 @@ class TaoTracker(object):
                     frame_ids=[frame_id])
 
         # pop memo
-        invalid_ids = []
-        for k, v in self.tracklets.items():
-            if frame_id - v['frame_ids'][-1] >= self.memo_frames:
-                invalid_ids.append(k)
+        invalid_ids = [
+            k
+            for k, v in self.tracklets.items()
+            if frame_id - v['frame_ids'][-1] >= self.memo_frames
+        ]
+
         for invalid_id in invalid_ids:
             self.tracklets.pop(invalid_id)
 
@@ -239,9 +241,8 @@ class TaoTracker(object):
                     if len(self.gt_tracks[gt_id]['ids']) > 0:
                         if pred_id != self.gt_tracks[gt_id]['ids'][-1]:
                             idsw[i] = 1
-                    else:
-                        if pred_id in self.pred_tracks:
-                            idsw[i] = 1
+                    elif pred_id in self.pred_tracks:
+                        idsw[i] = 1
                     self.gt_tracks[gt_id]['scores'].append(
                         float(f'{bbox[-1]:.3f}'))
                     self.gt_tracks[gt_id]['ids'].append(pred_id)
@@ -270,11 +271,8 @@ class TaoTracker(object):
                 self.pred_tracks[id]['frame_ids'].append(
                     metas.img_info['frame_id'])
 
-                if fps[i]:
-                    if id in self.valid_ids:
-                        sw_fps[i] = 1
-                    continue
-
+                if fps[i] and id in self.valid_ids:
+                    sw_fps[i] = 1
             fp_inds = sw_fps == 1  # red
             fn_inds = fns == 1  # yellow
             idsw_inds = idsw == 1  # cyan
@@ -330,8 +328,7 @@ class TaoTracker(object):
 def random_color(seed):
     random.seed(seed)
     colors = sns.color_palette()
-    color = random.choice(colors)
-    return color
+    return random.choice(colors)
 
 
 def imshow_tracklets(img,
@@ -350,7 +347,6 @@ def imshow_tracklets(img,
     # assert bboxes.shape[1] == 4 or bboxes.shape[1] == 5
     if isinstance(img, str):
         img = imread(img)
-    i = 0
     if bboxes.shape[0] == 0:
         if out_file is not None:
             imwrite(img, out_file)
@@ -359,7 +355,7 @@ def imshow_tracklets(img,
         bboxes = bboxes.numpy()
         labels = labels.numpy()
         ids = ids.numpy()
-    for bbox, label in zip(bboxes, labels):
+    for i, (bbox, label) in enumerate(zip(bboxes, labels)):
         x1, y1, x2, y2, _ = bbox.astype(np.int32)
         if ids is not None:
             if color is None:
@@ -375,26 +371,11 @@ def imshow_tracklets(img,
                 font_scale,
                 color=color_val('black'))
         else:
-            if color is None:
-                bbox_color = color_val('green')
-            else:
-                bbox_color = mmcv.color_val(color)
-
+            bbox_color = color_val('green') if color is None else mmcv.color_val(color)
         cv2.rectangle(img, (x1, y1), (x2, y2), bbox_color, thickness=thickness)
 
         if bbox[-1] < 0:
             bbox[-1] = np.nan
-        # label_text = '{:.02f}'.format(bbox[-1])
-        # img[y1 - 12:y1, x1:x1 + 30, :] = bbox_color
-        # cv2.putText(
-        #     img,
-        #     label_text, (x1, y1 - 2),
-        #     cv2.FONT_HERSHEY_COMPLEX,
-        #     font_scale,
-        #     color=color_val('black'))
-
-        i += 1
-
     if show:
         imshow(img, win_name)
     if out_file is not None:

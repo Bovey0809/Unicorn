@@ -41,10 +41,13 @@ class Transform:
         self._valid_all = self._valid_inputs + self._valid_args
 
     def __call__(self, **inputs):
-        var_names = [k for k in inputs.keys() if k in self._valid_inputs]
-        for v in inputs.keys():
+        var_names = [k for k in inputs if k in self._valid_inputs]
+        for v in inputs:
             if v not in self._valid_all:
-                raise ValueError('Incorrect input \"{}\" to transform. Only supports inputs {} and arguments {}.'.format(v, self._valid_inputs, self._valid_args))
+                raise ValueError(
+                    f'Incorrect input \"{v}\" to transform. Only supports inputs {self._valid_inputs} and arguments {self._valid_args}.'
+                )
+
 
         joint_mode = inputs.get('joint', True)
         new_roll = inputs.get('new_roll', True)
@@ -64,7 +67,11 @@ class Transform:
 
     def _split_inputs(self, inputs):
         var_names = [k for k in inputs.keys() if k in self._valid_inputs]
-        split_inputs = [{k: v for k, v in zip(var_names, vals)} for vals in zip(*[inputs[vn] for vn in var_names])]
+        split_inputs = [
+            dict(zip(var_names, vals))
+            for vals in zip(*[inputs[vn] for vn in var_names])
+        ]
+
         for arg_name, arg_val in filter(lambda it: it[0]!='joint' and it[0] in self._valid_args, inputs.items()):
             if isinstance(arg_val, list):
                 for inp, av in zip(split_inputs, arg_val):
@@ -75,7 +82,7 @@ class Transform:
         return split_inputs
 
     def __repr__(self):
-        format_string = self.__class__.__name__ + '('
+        format_string = f'{self.__class__.__name__}('
         for t in self.transforms:
             format_string += '\n'
             format_string += '    {0}'.format(t)
@@ -106,10 +113,10 @@ class TransformBase:
                 rand_params = (rand_params,)
             self._rand_params = rand_params
 
-        outputs = dict()
+        outputs = {}
         for var_name, var in input_vars.items():
             if var is not None:
-                transform_func = getattr(self, 'transform_' + var_name)
+                transform_func = getattr(self, f'transform_{var_name}')
                 if var_name in ['coords', 'bbox']:
                     params = (self._get_image_size(input_vars),) + self._rand_params
                 else:
@@ -121,11 +128,15 @@ class TransformBase:
         return outputs
 
     def _get_image_size(self, inputs):
-        im = None
-        for var_name in ['image', 'mask']:
-            if inputs.get(var_name) is not None:
-                im = inputs[var_name]
-                break
+        im = next(
+            (
+                inputs[var_name]
+                for var_name in ['image', 'mask']
+                if inputs.get(var_name) is not None
+            ),
+            None,
+        )
+
         if im is None:
             return None
         if isinstance(im, (list, tuple)):
@@ -166,8 +177,7 @@ class TransformBase:
         coord_transf = self.transform_coords(coord_all, image_shape, *rand_params).flip(0)
         tl = torch.min(coord_transf, dim=1)[0]
         sz = torch.max(coord_transf, dim=1)[0] - tl
-        bbox_out = torch.cat((tl, sz), dim=-1).reshape(bbox.shape)
-        return bbox_out
+        return torch.cat((tl, sz), dim=-1).reshape(bbox.shape)
 
     def transform_mask(self, mask, *rand_params):
         """Must be deterministic"""
@@ -188,10 +198,7 @@ class ToTensor(TransformBase):
 
         image = torch.from_numpy(image.transpose((2, 0, 1)))
         # backward compatibility
-        if isinstance(image, torch.ByteTensor):
-            return image.float().div(255)
-        else:
-            return image
+        return image.float().div(255) if isinstance(image, torch.ByteTensor) else image
 
     def transfrom_mask(self, mask):
         if isinstance(mask, np.ndarray):
@@ -227,10 +234,7 @@ class ToTensorAndJitter(TransformBase):
             return image.float().mul(brightness_factor).clamp(0.0, 255.0)
 
     def transform_mask(self, mask, brightness_factor):
-        if isinstance(mask, np.ndarray):
-            return torch.from_numpy(mask)
-        else:
-            return mask
+        return torch.from_numpy(mask) if isinstance(mask, np.ndarray) else mask
     def transform_att(self, att, brightness_factor):
         if isinstance(att, np.ndarray):
             return torch.from_numpy(att).to(torch.bool)
@@ -277,8 +281,7 @@ class ToBGR(TransformBase):
     def transform_image(self, image):
         if torch.is_tensor(image):
             raise NotImplementedError('Implement torch variant.')
-        img_bgr = cv.cvtColor(image, cv.COLOR_RGB2BGR)
-        return img_bgr
+        return cv.cvtColor(image, cv.COLOR_RGB2BGR)
 
 
 class RandomHorizontalFlip(TransformBase):
@@ -292,9 +295,7 @@ class RandomHorizontalFlip(TransformBase):
 
     def transform_image(self, image, do_flip):
         if do_flip:
-            if torch.is_tensor(image):
-                return image.flip((2,))
-            return np.fliplr(image).copy()
+            return image.flip((2,)) if torch.is_tensor(image) else np.fliplr(image).copy()
         return image
 
     def transform_coords(self, coords, image_shape, do_flip):
@@ -306,16 +307,12 @@ class RandomHorizontalFlip(TransformBase):
 
     def transform_mask(self, mask, do_flip):
         if do_flip:
-            if torch.is_tensor(mask):
-                return mask.flip((-1,))
-            return np.fliplr(mask).copy()
+            return mask.flip((-1,)) if torch.is_tensor(mask) else np.fliplr(mask).copy()
         return mask
 
     def transform_att(self, att, do_flip):
         if do_flip:
-            if torch.is_tensor(att):
-                return att.flip((-1,))
-            return np.fliplr(att).copy()
+            return att.flip((-1,)) if torch.is_tensor(att) else np.fliplr(att).copy()
         return att
 
 

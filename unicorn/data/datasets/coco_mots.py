@@ -62,7 +62,7 @@ class COCOMOTSDataset(Dataset):
         self.class_ids = sorted(self.coco.getCatIds()) # 1~90
         # print("self.class_ids: ", self.class_ids)
         cats = self.coco.loadCats(self.coco.getCatIds())
-        self._classes = tuple([c["name"] for c in cats]) # ("person", "bicycle", ...)
+        self._classes = tuple(c["name"] for c in cats)
         # print("self._classes: ", self._classes)
         self.cat_names_in_coco = cat_names_in_coco
         self.cat_names_full = cat_names_full
@@ -93,7 +93,7 @@ class COCOMOTSDataset(Dataset):
         )
         max_h = self.img_size[0]
         max_w = self.img_size[1]
-        cache_file = self.data_dir + "/img_resized_cache_" + self.name + ".array"
+        cache_file = f"{self.data_dir}/img_resized_cache_{self.name}.array"
         if not os.path.exists(cache_file):
             logger.info(
                 "Caching images for the first time. This might take about 20 minutes for COCO"
@@ -147,17 +147,16 @@ class COCOMOTSDataset(Dataset):
             y1 = np.max((0, obj["bbox"][1]))
             x2 = np.min((width, x1 + np.max((0, obj["bbox"][2]))))
             y2 = np.min((height, y1 + np.max((0, obj["bbox"][3]))))
-            cat_name = self._classes[(obj["category_id"] - 1)] # category name
             if self.cat_names_in_coco is not None:
+                cat_name = self._classes[(obj["category_id"] - 1)] # category name
                 if cat_name in self.cat_names_in_coco:
                     cls_list.append(self.cat_names_full.index(cat_name))
                     if obj["area"] > 0 and (x2-x1)>self.min_sz and (y2-y1)>self.min_sz:
                         obj["clean_bbox"] = [x1, y1, x2, y2]
                         objs.append(obj)
-            else:
-                if obj["area"] > 0 and (x2-x1)>self.min_sz and (y2-y1)>self.min_sz:
-                    obj["clean_bbox"] = [x1, y1, x2, y2]
-                    objs.append(obj)
+            elif obj["area"] > 0 and (x2-x1)>self.min_sz and (y2-y1)>self.min_sz:
+                obj["clean_bbox"] = [x1, y1, x2, y2]
+                objs.append(obj)
 
         num_objs = min(self.max_inst, len(objs))
 
@@ -196,12 +195,11 @@ class COCOMOTSDataset(Dataset):
     def load_resized_img(self, index):
         img = self.load_image(index) # BGR Image
         r = min(self.img_size[0] / img.shape[0], self.img_size[1] / img.shape[1])
-        resized_img = cv2.resize(
+        return cv2.resize(
             img,
             (int(img.shape[1] * r), int(img.shape[0] * r)),
             interpolation=cv2.INTER_LINEAR,
         ).astype(np.uint8)
-        return resized_img
 
     def load_image(self, index):
         file_name = self.annotations[index][3]
@@ -215,19 +213,18 @@ class COCOMOTSDataset(Dataset):
 
     def load_resized_mask(self, index):
         mask = self.load_mask(index)
-        if mask is not None:
-            r = min(self.img_size[0] / mask.shape[0], self.img_size[1] / mask.shape[1])
-            resized_mask = cv2.resize(
-                mask,
-                (int(mask.shape[1] * r), int(mask.shape[0] * r)),
-                interpolation=cv2.INTER_LINEAR,
-            ).astype(np.float32)
-            # resize would transform (H, W, 1) to (H, W). So we need to manually add an axis
-            if len(resized_mask.shape) == 2:
-                resized_mask = resized_mask[:, :, None] # to (H, W, 1)
-            return resized_mask
-        else:
+        if mask is None:
             return np.zeros((self.img_size[0], self.img_size[1], 0))
+        r = min(self.img_size[0] / mask.shape[0], self.img_size[1] / mask.shape[1])
+        resized_mask = cv2.resize(
+            mask,
+            (int(mask.shape[1] * r), int(mask.shape[0] * r)),
+            interpolation=cv2.INTER_LINEAR,
+        ).astype(np.float32)
+        # resize would transform (H, W, 1) to (H, W). So we need to manually add an axis
+        if len(resized_mask.shape) == 2:
+            resized_mask = resized_mask[:, :, None] # to (H, W, 1)
+        return resized_mask
 
     def load_mask(self, index):
         id_ = self.ids[index]
@@ -245,23 +242,24 @@ class COCOMOTSDataset(Dataset):
             y1 = np.max((0, obj["bbox"][1]))
             x2 = np.min((width, x1 + np.max((0, obj["bbox"][2]))))
             y2 = np.min((height, y1 + np.max((0, obj["bbox"][3]))))
-            cat_name = self._classes[(obj["category_id"] - 1)] # category name
             if self.cat_names_in_coco is not None:
-                if cat_name in self.cat_names_in_coco:
-                    # cls_list.append(self.cat_names_full.index(cat_name))
-                    if obj["area"] > 0 and (x2-x1)>=self.min_sz and (y2-y1)>=self.min_sz:
-                        masks.append(self.coco.annToMask(obj))
-            else:
-                if obj["area"] > 0 and (x2-x1)>=self.min_sz and (y2-y1)>=self.min_sz:
+                cat_name = self._classes[(obj["category_id"] - 1)] # category name
+                if (
+                    cat_name in self.cat_names_in_coco
+                    and obj["area"] > 0
+                    and (x2 - x1) >= self.min_sz
+                    and (y2 - y1) >= self.min_sz
+                ):
                     masks.append(self.coco.annToMask(obj))
+            elif obj["area"] > 0 and (x2-x1)>=self.min_sz and (y2-y1)>=self.min_sz:
+                masks.append(self.coco.annToMask(obj))
             if len(masks) == self.max_inst:
                 break
-        if len(masks) > 0:
-            mask_arr = np.stack(masks, axis=-1).astype(np.float32) # (H, W, N)
-        else:
-            # mask_arr = None
-            mask_arr = np.zeros((self.img_size[0], self.img_size[1], 0))
-        return mask_arr
+        return (
+            np.stack(masks, axis=-1).astype(np.float32)
+            if masks
+            else np.zeros((self.img_size[0], self.img_size[1], 0))
+        )
 
     def pull_item(self, idx, num_frames=2):
         """idx is invalid"""

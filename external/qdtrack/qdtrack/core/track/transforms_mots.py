@@ -14,6 +14,5 @@ def track2result(bboxes, labels, segms, ids):
     return outputs
 
 def segtrack2result(bboxes, labels, segms, ids):
-    outputs = track2result(bboxes, labels, segms, ids)
-    return outputs
+    return track2result(bboxes, labels, segms, ids)
 

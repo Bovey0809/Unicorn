@@ -7,11 +7,14 @@ def merge_backbone_output(inp_list):
         feat: HWxBxC, pos: HWxBxC, mask: BxHW
     """
     nf = len(inp_list)
-    seq_dict = {"feat": torch.cat([x["feat"] for x in inp_list], dim=0),
-                "mask": torch.cat([x["mask"] for x in inp_list], dim=1),
-                "pos": torch.cat([x["pos"] for x in inp_list], dim=0),
-                "h": inp_list[0]["h"], "w": inp_list[0]["w"], "nf": nf}
-    return seq_dict
+    return {
+        "feat": torch.cat([x["feat"] for x in inp_list], dim=0),
+        "mask": torch.cat([x["mask"] for x in inp_list], dim=1),
+        "pos": torch.cat([x["pos"] for x in inp_list], dim=0),
+        "h": inp_list[0]["h"],
+        "w": inp_list[0]["w"],
+        "nf": nf,
+    }
 
 
 def convert_to_onehot(x, dim):
@@ -28,5 +31,4 @@ def adjust_labels_sz(inp_lbs, dh, dw):
     """interpolation"""
     x = NNF.interpolate(inp_lbs, size=(dh, dw), mode="bilinear", align_corners=False)
     """convert to one-hot"""
-    out_lbs = convert_to_onehot(x, dim=1)
-    return out_lbs
+    return convert_to_onehot(x, dim=1)

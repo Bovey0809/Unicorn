@@ -20,10 +20,7 @@ class BaseTracker:
         raise NotImplementedError
 
     def visdom_draw_tracking(self, image, box, segmentation=None):
-        if isinstance(box, OrderedDict):
-            box = [v for k, v in box.items()]
-        else:
-            box = (box,)
+        box = [v for k, v in box.items()] if isinstance(box, OrderedDict) else (box, )
         if segmentation is None:
             self.visdom.register((image, *box), 'Tracking', 1, 'Tracking')
         else:

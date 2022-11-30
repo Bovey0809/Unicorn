@@ -15,7 +15,7 @@ new_path = Path(args.output)
 
 with open(path, 'r') as fh:
     config = json.load(fh)
-    
+
 new_categories = [{'id': 1, 'name': 'pedestrian'}, {'id': 2, 'name': 'rider'}, {'id': 3, 'name': 'car'},
                   {'id': 4, 'name': 'bus'}, {'id': 5, 'name': 'truck'}, {'id': 6, 'name': 'bicycle'},
                   {'id': 7, 'name': 'motorcycle'}, {'id': 8, 'name': 'train'}]

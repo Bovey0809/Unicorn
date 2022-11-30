@@ -17,9 +17,8 @@ def cal_similarity(key_embeds,
         ref_embeds = F.normalize(ref_embeds, p=2, dim=1)
         return torch.mm(key_embeds, ref_embeds.t())
     elif method == 'dot_product':
-        if temperature > 0:
-            dists = cal_similarity(key_embeds, ref_embeds, method='cosine')
-            dists /= temperature
-            return dists
-        else:
+        if temperature <= 0:
             return torch.mm(key_embeds, ref_embeds.t())
+        dists = cal_similarity(key_embeds, ref_embeds, method='cosine')
+        dists /= temperature
+        return dists

@@ -65,7 +65,7 @@ version_info = ({})
     with open('qdtrack/VERSION', 'r') as f:
         SHORT_VERSION = f.read().strip()
     VERSION_INFO = ', '.join(SHORT_VERSION.split('.'))
-    VERSION = SHORT_VERSION + '+' + sha
+    VERSION = f'{SHORT_VERSION}+{sha}'
 
     version_file_str = content.format(time.asctime(), VERSION, SHORT_VERSION,
                                       VERSION_INFO)

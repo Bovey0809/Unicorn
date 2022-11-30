@@ -82,11 +82,11 @@ def get_eval_video_name_list_from_yml(path: str, data_set: str) -> list:
     with open(path, encoding="utf-8", mode="r") as f_stream:
         data_info_dict = yaml.load(f_stream, Loader=yaml.FullLoader)
 
-    eval_video_name_list = []
-    for video_dict in data_info_dict["sequences"]:
-        if video_dict["set"] == data_set:
-            eval_video_name_list.append(video_dict["name"])
-    return eval_video_name_list
+    return [
+        video_dict["name"]
+        for video_dict in data_info_dict["sequences"]
+        if video_dict["set"] == data_set
+    ]
 
 
 def get_mean_recall_decay_for_video(per_frame_values):
@@ -113,7 +113,7 @@ def get_mean_recall_decay_for_video(per_frame_values):
     ids = np.round(np.linspace(1, len(per_frame_values), N_bins + 1) + 1e-10) - 1
     ids = ids.astype(np.uint8)
 
-    D_bins = [per_frame_values[ids[i] : ids[i + 1] + 1] for i in range(0, 4)]
+    D_bins = [per_frame_values[ids[i] : ids[i + 1] + 1] for i in range(4)]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -203,10 +203,9 @@ def get_method_score_dict(
         )
         for video_name in video_name_list
     )
-    video_score_dict = {
+    return {
         list(kv.keys())[0]: list(kv.values())[0] for kv in video_score_list
     }
-    return video_score_dict
 
 
 def get_method_average_score_dict(method_score_dict: dict):
@@ -260,8 +259,7 @@ def get_eval_video_name_list_from_txt(path: str) -> list:
     name_list = []
     with open(path, encoding="utf-8", mode="r") as f:
         for line in f:
-            line = line.strip()
-            if line:
+            if line := line.strip():
                 name_list.append(line)
     return name_list
 
@@ -344,8 +342,8 @@ if __name__ == "__main__":
     eval_method_from_data(
         method_pre_path=args.pred_path,
         mask_data_root=args.mask_root,
-        ignore_tail=True if args.ignore_tail == "True" else False,
-        ignore_head=True if args.ignore_head == "True" else False,
+        ignore_tail=args.ignore_tail == "True",
+        ignore_head=args.ignore_head == "True",
         name_list_path=args.name_list_path,
         save_path=args.save_path,
         n_jobs=args.n_jobs,

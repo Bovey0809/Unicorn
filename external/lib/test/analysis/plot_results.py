@@ -10,25 +10,25 @@ from lib.test.analysis.extract_results import extract_results
 
 
 def get_plot_draw_styles():
-    plot_draw_style = [{'color': (1.0, 0.0, 0.0), 'line_style': '-'},
-                       {'color': (0.0, 1.0, 0.0), 'line_style': '-'},
-                       {'color': (0.0, 0.0, 1.0), 'line_style': '-'},
-                       {'color': (0.0, 0.0, 0.0), 'line_style': '-'},
-                       {'color': (1.0, 0.0, 1.0), 'line_style': '-'},
-                       {'color': (0.0, 1.0, 1.0), 'line_style': '-'},
-                       {'color': (0.5, 0.5, 0.5), 'line_style': '-'},
-                       {'color': (136.0 / 255.0, 0.0, 21.0 / 255.0), 'line_style': '-'},
-                       {'color': (1.0, 127.0 / 255.0, 39.0 / 255.0), 'line_style': '-'},
-                       {'color': (0.0, 162.0 / 255.0, 232.0 / 255.0), 'line_style': '-'},
-                       {'color': (0.0, 0.5, 0.0), 'line_style': '-'},
-                       {'color': (1.0, 0.5, 0.2), 'line_style': '-'},
-                       {'color': (0.1, 0.4, 0.0), 'line_style': '-'},
-                       {'color': (0.6, 0.3, 0.9), 'line_style': '-'},
-                       {'color': (0.4, 0.7, 0.1), 'line_style': '-'},
-                       {'color': (0.2, 0.1, 0.7), 'line_style': '-'},
-                       {'color': (0.7, 0.6, 0.2), 'line_style': '-'}]
-
-    return plot_draw_style
+    return [
+        {'color': (1.0, 0.0, 0.0), 'line_style': '-'},
+        {'color': (0.0, 1.0, 0.0), 'line_style': '-'},
+        {'color': (0.0, 0.0, 1.0), 'line_style': '-'},
+        {'color': (0.0, 0.0, 0.0), 'line_style': '-'},
+        {'color': (1.0, 0.0, 1.0), 'line_style': '-'},
+        {'color': (0.0, 1.0, 1.0), 'line_style': '-'},
+        {'color': (0.5, 0.5, 0.5), 'line_style': '-'},
+        {'color': (136.0 / 255.0, 0.0, 21.0 / 255.0), 'line_style': '-'},
+        {'color': (1.0, 127.0 / 255.0, 39.0 / 255.0), 'line_style': '-'},
+        {'color': (0.0, 162.0 / 255.0, 232.0 / 255.0), 'line_style': '-'},
+        {'color': (0.0, 0.5, 0.0), 'line_style': '-'},
+        {'color': (1.0, 0.5, 0.2), 'line_style': '-'},
+        {'color': (0.1, 0.4, 0.0), 'line_style': '-'},
+        {'color': (0.6, 0.3, 0.9), 'line_style': '-'},
+        {'color': (0.4, 0.7, 0.1), 'line_style': '-'},
+        {'color': (0.2, 0.1, 0.7), 'line_style': '-'},
+        {'color': (0.7, 0.6, 0.2), 'line_style': '-'},
+    ]
 
 
 def check_eval_data_is_valid(eval_data, trackers, dataset):
@@ -88,15 +88,16 @@ def merge_multiple_runs(eval_data):
 
 def get_tracker_display_name(tracker):
     if tracker['disp_name'] is None:
-        if tracker['run_id'] is None:
-            disp_name = '{}_{}'.format(tracker['name'], tracker['param'])
-        else:
-            disp_name = '{}_{}_{:03d}'.format(tracker['name'], tracker['param'],
-                                              tracker['run_id'])
-    else:
-        disp_name = tracker['disp_name']
+        return (
+            f"{tracker['name']}_{tracker['param']}"
+            if tracker['run_id'] is None
+            else '{}_{}_{:03d}'.format(
+                tracker['name'], tracker['param'], tracker['run_id']
+            )
+        )
 
-    return  disp_name
+    else:
+        return tracker['disp_name']
 
 
 def plot_draw_save(y, x, scores, trackers, plot_draw_styles, result_plot_path, plot_opts):
@@ -162,8 +163,14 @@ def plot_draw_save(y, x, scores, trackers, plot_draw_styles, result_plot_path, p
     ax.grid(True, linestyle='-.')
     fig.tight_layout()
 
-    tikzplotlib.save('{}/{}_plot.tex'.format(result_plot_path, plot_type))
-    fig.savefig('{}/{}_plot.pdf'.format(result_plot_path, plot_type), dpi=300, format='pdf', transparent=True)
+    tikzplotlib.save(f'{result_plot_path}/{plot_type}_plot.tex')
+    fig.savefig(
+        f'{result_plot_path}/{plot_type}_plot.pdf',
+        dpi=300,
+        format='pdf',
+        transparent=True,
+    )
+
     plt.draw()
 
 
@@ -241,9 +248,12 @@ def plot_results(trackers, dataset, report_name, merge_results=False,
 
     valid_sequence = torch.tensor(eval_data['valid_sequence'], dtype=torch.bool)
 
-    print('\nPlotting results over {} / {} sequences'.format(valid_sequence.long().sum().item(), valid_sequence.shape[0]))
+    print(
+        f'\nPlotting results over {valid_sequence.long().sum().item()} / {valid_sequence.shape[0]} sequences'
+    )
 
-    print('\nGenerating plots for: {}'.format(report_name))
+
+    print(f'\nGenerating plots for: {report_name}')
 
     # ********************************  Success Plot **************************************
     if 'success' in plot_types:
@@ -335,7 +345,10 @@ def print_results(trackers, dataset, report_name, merge_results=False,
     tracker_names = eval_data['trackers']
     valid_sequence = torch.tensor(eval_data['valid_sequence'], dtype=torch.bool)
 
-    print('\nReporting results over {} / {} sequences'.format(valid_sequence.long().sum().item(), valid_sequence.shape[0]))
+    print(
+        f'\nReporting results over {valid_sequence.long().sum().item()} / {valid_sequence.shape[0]} sequences'
+    )
+
 
     scores = {}
 
@@ -394,14 +407,13 @@ def plot_got_success(trackers, report_name):
     # Load results
     tracker_names = []
     for trk_id, trk in enumerate(trackers):
-        json_path = '{}/{}.json'.format(settings.got_reports_path, trk.name)
+        json_path = f'{settings.got_reports_path}/{trk.name}.json'
 
-        if os.path.isfile(json_path):
-            with open(json_path, 'r') as f:
-                eval_data = json.load(f)
-        else:
-            raise Exception('Report not found {}'.format(json_path))
+        if not os.path.isfile(json_path):
+            raise Exception(f'Report not found {json_path}')
 
+        with open(json_path, 'r') as f:
+            eval_data = json.load(f)
         if len(eval_data.keys()) > 1:
             raise Exception
 
@@ -414,7 +426,7 @@ def plot_got_success(trackers, report_name):
             curve = eval_data['overall']['succ_curve']
             ao = eval_data['overall']['ao']
         else:
-            raise Exception('Invalid JSON file {}'.format(json_path))
+            raise Exception(f'Invalid JSON file {json_path}')
 
         auc_curve[trk_id, :] = torch.tensor(curve) * 100.0
         scores[trk_id] = ao * 100.0
@@ -481,7 +493,14 @@ def print_per_sequence_results(trackers, dataset, report_name, merge_results=Fal
             raise Exception
 
     avg_overlap_all = avg_overlap_all[valid_sequence, :]
-    sequence_names = [s + ' (ID={})'.format(i) for i, (s, v) in enumerate(zip(sequence_names, valid_sequence.tolist())) if v]
+    sequence_names = [
+        f'{s} (ID={i})'
+        for i, (s, v) in enumerate(
+            zip(sequence_names, valid_sequence.tolist())
+        )
+        if v
+    ]
+
 
     tracker_disp_names = [get_tracker_display_name(trk) for trk in tracker_names]
 

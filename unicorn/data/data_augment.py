@@ -119,9 +119,7 @@ def random_perspective(
                     masks, M[:2], dsize=(width, height), borderValue=(0, 0, 0)
                 )    
 
-    # Transform label coordinates
-    n = len(targets)
-    if n:
+    if n := len(targets):
         # warp points
         xy = np.ones((n * 4, 3))
         xy[:, :2] = targets[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(
@@ -161,10 +159,7 @@ def random_perspective(
             # targets = targets[targets[:, 2] > 0]
             # targets = targets[targets[:, 1] < height]
             # targets = targets[targets[:, 3] > 0]
-    if masks is not None:
-        return img, targets, masks
-    else:
-        return img, targets
+    return (img, targets, masks) if masks is not None else (img, targets)
 
 
 def _mirror(image, boxes, prob=0.5, mask=None):
@@ -174,10 +169,7 @@ def _mirror(image, boxes, prob=0.5, mask=None):
         boxes[:, 0::2] = width - boxes[:, 2::-2]
         if mask is not None:
             mask = mask[:, ::-1]
-    if mask is None:
-        return image, boxes
-    else:
-        return image, boxes, mask
+    return (image, boxes) if mask is None else (image, boxes, mask)
 
 
 def _mirror_joint(image, boxes, mask=None):
@@ -186,9 +178,8 @@ def _mirror_joint(image, boxes, mask=None):
     boxes[:, 0::2] = width - boxes[:, 2::-2]
     if mask is None:
         return image, boxes
-    else:
-        mask = mask[:, ::-1]
-        return image, boxes, mask
+    mask = mask[:, ::-1]
+    return image, boxes, mask
 
 
 def preproc(img, input_size, swap=(2, 0, 1)):
@@ -269,9 +260,7 @@ class TrainTransform_local:
 
     def __call__(self, image, targets, input_dim, joint=False, flip=False):
         """joint: whether to jointly flip the reference and the current frame"""
-        has_trackid = False
-        if targets.shape[1] == 6:
-            has_trackid = True
+        has_trackid = targets.shape[1] == 6
         boxes = targets[:, :4].copy()
         labels = targets[:, 4].copy()
         if has_trackid:
@@ -300,10 +289,7 @@ class TrainTransform_local:
         if random.random() < self.hsv_prob:
             augment_hsv(image)
         if joint:
-            if flip:
-                image_t, boxes = _mirror_joint(image, boxes)
-            else:
-                image_t, boxes = image, boxes
+            image_t, boxes = _mirror_joint(image, boxes) if flip else (image, boxes)
         else:
             image_t, boxes = _mirror(image, boxes, self.flip_prob)
         height, width, _ = image_t.shape
@@ -355,9 +341,7 @@ class TrainTransform:
 
     def __call__(self, image, targets, input_dim, joint=False, flip=False):
         """joint: whether to jointly flip the reference and the current frame"""
-        has_trackid = False
-        if targets.shape[1] == 6:
-            has_trackid = True
+        has_trackid = targets.shape[1] == 6
         boxes = targets[:, :4].copy()
         labels = targets[:, 4].copy()
         if has_trackid:
@@ -389,10 +373,7 @@ class TrainTransform:
         if random.random() < self.hsv_prob:
             augment_hsv(image)
         if joint:
-            if flip:
-                image_t, boxes = _mirror_joint(image, boxes)
-            else:
-                image_t, boxes = image, boxes
+            image_t, boxes = _mirror_joint(image, boxes) if flip else (image, boxes)
         else:
             image_t, boxes = _mirror(image, boxes, self.flip_prob)
         height, width, _ = image_t.shape
@@ -481,7 +462,7 @@ def get_jittered_box(box: torch.Tensor, scale_jitter_factor, center_jitter_facto
     else:
         jittered_size = box[2:4]
     max_offset = (jittered_size.prod().sqrt() * torch.tensor(center_jitter_factor).float())
-    jittered_center = box[0:2] + max_offset * (torch.rand(2) - 0.5)
+    jittered_center = box[:2] + max_offset * (torch.rand(2) - 0.5)
 
     return torch.cat((jittered_center, jittered_size), dim=0)
 
@@ -534,10 +515,7 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, pad_val=Non
         cv image - extracted crop
         float - the factor by which the crop has been resized to make the crop size equal output_size
     """
-    if not isinstance(target_bb, list):
-        cx, cy, w, h = target_bb.tolist()
-    else:
-        cx, cy, w, h = target_bb
+    cx, cy, w, h = target_bb if isinstance(target_bb, list) else target_bb.tolist()
     # Crop image
     crop_sz = math.ceil(math.sqrt(w * h) * search_area_factor)
 
@@ -585,18 +563,15 @@ def transform_image_to_crop(box_in: torch.Tensor, box_extract: torch.Tensor, res
     returns:
         torch.Tensor - transformed co-ordinates of box_in
     """
-    box_extract_center = box_extract[0:2]
+    box_extract_center = box_extract[:2]
 
-    box_in_center = box_in[0:2]
+    box_in_center = box_in[:2]
 
     box_out_center = (crop_sz - 1) / 2 + (box_in_center - box_extract_center) * resize_factor
     box_out_wh = box_in[2:4] * resize_factor
 
     box_out = torch.cat((box_out_center, box_out_wh))
-    if normalize:
-        return box_out / crop_sz[0]
-    else:
-        return box_out
+    return box_out / crop_sz[0] if normalize else box_out
 
 class TrainTransform_omni:
     def __init__(self, max_labels=50, flip_prob=0.5, hsv_prob=1.0, legacy=False):
@@ -607,9 +582,7 @@ class TrainTransform_omni:
 
     def __call__(self, image, targets, input_dim, joint=False, flip=False):
         """joint: whether to jointly flip the reference and the current frame"""
-        has_trackid = False
-        if targets.shape[1] == 6:
-            has_trackid = True
+        has_trackid = targets.shape[1] == 6
         boxes = targets[:, :4].copy()
         labels = targets[:, 4].copy()
         if has_trackid:
@@ -618,7 +591,7 @@ class TrainTransform_omni:
         else:
             # SOT
             trackids = np.zeros((len(targets),))
-            trackids[0] = 1 
+            trackids[0] = 1
         if len(boxes) == 0:
             # if there is no object on the image
             targets = np.zeros((self.max_labels, 6), dtype=np.float32)
@@ -639,17 +612,14 @@ class TrainTransform_omni:
             trackids_o = targets_o[:, 5]
         else:
             trackids_o = np.zeros((len(targets),))
-            trackids_o[0] = 1 
+            trackids_o[0] = 1
         # bbox_o: [xyxy] to [c_x,c_y,w,h]
         boxes_o = xyxy2cxcywh(boxes_o)
 
         if random.random() < self.hsv_prob:
             augment_hsv(image)
         if joint:
-            if flip:
-                image_t, boxes = _mirror_joint(image, boxes)
-            else:
-                image_t, boxes = image, boxes
+            image_t, boxes = _mirror_joint(image, boxes) if flip else (image, boxes)
         else:
             image_t, boxes = _mirror(image, boxes, self.flip_prob)
         height, width, _ = image_t.shape
@@ -670,7 +640,7 @@ class TrainTransform_omni:
             trackids_t = trackids_o
 
         labels_t = np.expand_dims(labels_t, 1)
-        
+
         trackids_t = trackids[mask_b]
         trackids_t = np.expand_dims(trackids_t, 1)
         targets_t = np.hstack((labels_t, boxes_t, trackids_t)) # turn to "label first, box next, track ids last" (N, 6)
@@ -700,9 +670,7 @@ class TrainTransform_Ins:
         # to reduce the latency (copy data from cpu to gpu), we downsample mask by 4x
         input_dim_d = (int(input_dim[0] * self.d_rate), int(input_dim[1] * self.d_rate))
         """joint: whether to jointly flip the reference and the current frame"""
-        has_trackid = False
-        if targets.shape[1] == 6:
-            has_trackid = True
+        has_trackid = targets.shape[1] == 6
         assert (targets.shape[0] == mask.shape[2]) # assert (num_boxes = num_masks)
         boxes = targets[:, :4].copy()
         labels = targets[:, 4].copy()
@@ -800,8 +768,7 @@ class TrainTransform_4tasks:
         self.trans_inst = TrainTransform_Ins(max_labels, flip_prob, hsv_prob, legacy, d_rate)
     
     def __call__(self, image, targets, mask, input_dim, joint=False, flip=False):
-        if mask is None:
-            image_t, padded_labels = self.trans_omni(image, targets, input_dim, joint, flip)
-            return image_t, padded_labels, None
-        else:
+        if mask is not None:
             return self.trans_inst(image, targets, mask, input_dim, joint, flip)
+        image_t, padded_labels = self.trans_omni(image, targets, input_dim, joint, flip)
+        return image_t, padded_labels, None

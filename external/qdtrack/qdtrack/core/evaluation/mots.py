@@ -45,7 +45,7 @@ def eval_mots(api, anns, all_results, split_camera=False, class_average=False):
     global_instance_id = 0
     num_instances = 0
     cat_ids = np.unique(list(cats_mapping.values()))
-    video_camera_mapping = dict()
+    video_camera_mapping = {}
     for cat_id in cat_ids:
         for video in anns['videos']:
             box_track_acc[cat_id][video['id']] = mm.MOTAccumulator(auto_id=True)
@@ -58,8 +58,8 @@ def eval_mots(api, anns, all_results, split_camera=False, class_average=False):
 
         if img['frame_id'] == 0:
             global_instance_id += num_instances
-        if len(list(results.keys())) > 0:
-            num_instances = max([int(k) for k in results.keys()]) + 1
+        if list(results.keys()):
+            num_instances = max(int(k) for k in results.keys()) + 1
 
         pred_bboxes, pred_ids = defaultdict(list), defaultdict(list)
         pred_segms = defaultdict(list)
@@ -144,7 +144,7 @@ def eval_mots(api, anns, all_results, split_camera=False, class_average=False):
             mh,
             generate_overall=True,
             class_average=class_average)
-        out = {k: v for k, v in summary.to_dict().items()}
+        out = dict(summary.to_dict().items())
 
     # eval for track
     print('Generating matchings and summary...')

@@ -9,8 +9,11 @@ from lib.test.evaluation.environment import env_settings
 def transform_got10k(tracker_name, cfg_name):
     env = env_settings()
     result_dir = env.results_path
-    src_dir = os.path.join(result_dir, "%s/%s/got10k/" % (tracker_name, cfg_name))
-    dest_dir = os.path.join(result_dir, "%s/%s/got10k_submit/" % (tracker_name, cfg_name))
+    src_dir = os.path.join(result_dir, f"{tracker_name}/{cfg_name}/got10k/")
+    dest_dir = os.path.join(
+        result_dir, f"{tracker_name}/{cfg_name}/got10k_submit/"
+    )
+
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
     items = os.listdir(src_dir)
@@ -33,7 +36,7 @@ def transform_got10k(tracker_name, cfg_name):
             if not os.path.exists(seq_dir):
                 os.makedirs(seq_dir)
             dest_path = os.path.join(seq_dir, item)
-            os.system("cp %s %s" % (src_path, dest_path))
+            os.system(f"cp {src_path} {dest_path}")
     # make zip archive
     shutil.make_archive(src_dir, "zip", src_dir)
     shutil.make_archive(dest_dir, "zip", dest_dir)

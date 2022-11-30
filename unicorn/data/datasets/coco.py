@@ -48,7 +48,7 @@ class COCODataset(Dataset):
         self.class_ids = sorted(self.coco.getCatIds()) # 1~90
         # print("self.class_ids: ", self.class_ids)
         cats = self.coco.loadCats(self.coco.getCatIds())
-        self._classes = tuple([c["name"] for c in cats]) # ("person", "bicycle", ...)
+        self._classes = tuple(c["name"] for c in cats)
         # print("self._classes: ", self._classes)
         self.imgs = None
         self.name = name
@@ -78,9 +78,9 @@ class COCODataset(Dataset):
         max_h = self.img_size[0]
         max_w = self.img_size[1]
         if self.name is not None:
-            cache_file = self.data_dir + "/img_resized_cache_" + self.name + ".array"
+            cache_file = f"{self.data_dir}/img_resized_cache_{self.name}.array"
         else:
-            cache_file = self.data_dir + "/img_resized_cache.array"
+            cache_file = f"{self.data_dir}/img_resized_cache.array"
         if not os.path.exists(cache_file):
             logger.info(
                 "Caching images for the first time. This might take about 20 minutes for COCO"
@@ -166,12 +166,11 @@ class COCODataset(Dataset):
     def load_resized_img(self, index):
         img = self.load_image(index) # BGR Image
         r = min(self.img_size[0] / img.shape[0], self.img_size[1] / img.shape[1])
-        resized_img = cv2.resize(
+        return cv2.resize(
             img,
             (int(img.shape[1] * r), int(img.shape[0] * r)),
             interpolation=cv2.INTER_LINEAR,
         ).astype(np.uint8)
-        return resized_img
 
     def load_image(self, index):
         file_name = self.annotations[index][3]

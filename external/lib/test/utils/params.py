@@ -15,10 +15,7 @@ class TrackerParams:
         if len(default) > 1:
             raise ValueError('Can only give one default value.')
 
-        if not default:
-            return getattr(self, name)
-
-        return getattr(self, name, default[0])
+        return getattr(self, name, default[0]) if default else getattr(self, name)
 
     def has(self, name: str):
         """Check if there exist a parameter with the given name."""
@@ -28,7 +25,7 @@ class TrackerParams:
 class FeatureParams:
     """Class for feature specific parameters"""
     def __init__(self, *args, **kwargs):
-        if len(args) > 0:
+        if args:
             raise ValueError
 
         for name, val in kwargs.items():

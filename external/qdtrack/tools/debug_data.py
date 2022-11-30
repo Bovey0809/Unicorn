@@ -13,8 +13,7 @@ from qdtrack.datasets import BDDVideoDataset # keep this line
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a model')
     parser.add_argument('config', help='train config file path')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 """2021.12.03 debug training data"""
 def main():

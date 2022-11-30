@@ -101,7 +101,13 @@ class YouTubeVOS(VOSDatasetBase):
         self._anno_path = dset_path / 'Annotations'
 
         if all_frames:
-            self._jpeg_path = self.root / self.version / (split_folder + "_all_frames") / 'JPEGImages'
+            self._jpeg_path = (
+                self.root
+                / self.version
+                / f"{split_folder}_all_frames"
+                / 'JPEGImages'
+            )
+
         else:
             self._jpeg_path = dset_path / 'JPEGImages'
 
@@ -161,8 +167,8 @@ class YouTubeVOS(VOSDatasetBase):
             else:  # One object per sample
                 self._samples.extend([(seq, [obj_id]) for obj_id in obj_ids])
 
-        print("%s loaded." % self.get_name())
-        if len(to_remove) > 0:
+        print(f"{self.get_name()} loaded.")
+        if to_remove:
             print("   %d sequences were removed, (%d remaining)." % (len(to_remove), len(sequences)))
 
     def _construct_sequence(self, sequence_info):
@@ -172,16 +178,21 @@ class YouTubeVOS(VOSDatasetBase):
         fname_to_fid = {f: i for i, f in enumerate(frame_names)}
         images, gt_segs, gt_bboxes = self.get_paths_and_bboxes(sequence_info)
 
-        init_data = dict()
+        init_data = {}
         for obj_id in sequence_info['object_ids']:
             if obj_id == '0':
                 print("!")
             f_name = self.meta.object_first_frame(seq_name, obj_id)
             f_id = fname_to_fid[f_name]
             if f_id not in init_data:
-                init_data[f_id] = {'object_ids': [obj_id],
-                                   'bbox': {obj_id: gt_bboxes[obj_id][f_id,:]},
-                                   'mask': os.path.join(os.path.dirname(gt_segs[f_id]), (f_name + ".png"))}
+                init_data[f_id] = {
+                    'object_ids': [obj_id],
+                    'bbox': {obj_id: gt_bboxes[obj_id][f_id, :]},
+                    'mask': os.path.join(
+                        os.path.dirname(gt_segs[f_id]), f"{f_name}.png"
+                    ),
+                }
+
                 assert init_data[f_id]['mask'] in gt_segs  # If this fails, some file is missing
             else:
                 init_data[f_id]['object_ids'].append(obj_id)

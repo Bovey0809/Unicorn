@@ -114,12 +114,12 @@ def compare_dataframes(gts, ts):
     accs = []
     names = []
     for k, tsacc in ts.items():
-        if k in gts:            
-            logger.info('Comparing {}...'.format(k))
+        if k in gts:    
+            logger.info(f'Comparing {k}...')
             accs.append(mm.utils.compare_to_groundtruth(gts[k], tsacc, 'iou', distth=0.5))
             names.append(k)
         else:
-            logger.warning('No ground truth for {}, skipping.'.format(k))
+            logger.warning(f'No ground truth for {k}, skipping.')
 
     return accs, names
 
@@ -151,7 +151,7 @@ def main(exp, args, num_gpu):
     os.makedirs(results_folder, exist_ok=True)
 
     setup_logger(file_name, distributed_rank=rank, filename="val_log.txt", mode="a")
-    logger.info("Args: {}".format(args))
+    logger.info(f"Args: {args}")
 
     if args.conf is not None:
         exp.test_conf = args.conf
@@ -182,7 +182,7 @@ def main(exp, args, num_gpu):
         else:
             ckpt_file = args.ckpt
         logger.info("loading checkpoint")
-        loc = "cuda:{}".format(rank)
+        loc = f"cuda:{rank}"
         ckpt = torch.load(ckpt_file, map_location=loc)
         # load the model state dict
         missing_keys, unexpected_keys = model.load_state_dict(ckpt["model"], strict=False)
@@ -220,29 +220,35 @@ def main(exp, args, num_gpu):
     # evaluate MOTA
     mm.lap.default_solver = 'lap'
 
-    if exp.val_ann == 'val_half.json':
-        gt_type = '_val_half'
-    else:
-        gt_type = ''
+    gt_type = '_val_half' if exp.val_ann == 'val_half.json' else ''
     print('gt_type', gt_type)
     if args.mot20:
-        gtfiles = glob.glob(os.path.join('datasets/MOT20/train', '*/gt/gt{}.txt'.format(gt_type)))
+        gtfiles = glob.glob(
+            os.path.join('datasets/MOT20/train', f'*/gt/gt{gt_type}.txt')
+        )
+
     else:
-        gtfiles = glob.glob(os.path.join('datasets/mot/train', '*/gt/gt{}.txt'.format(gt_type)))
+        gtfiles = glob.glob(
+            os.path.join('datasets/mot/train', f'*/gt/gt{gt_type}.txt')
+        )
+
     print('gt_files', gtfiles)
     tsfiles = [f for f in glob.glob(os.path.join(results_folder, '*.txt')) if not os.path.basename(f).startswith('eval')]
 
-    logger.info('Found {} groundtruths and {} test files.'.format(len(gtfiles), len(tsfiles)))
-    logger.info('Available LAP solvers {}'.format(mm.lap.available_solvers))
-    logger.info('Default LAP solver \'{}\''.format(mm.lap.default_solver))
+    logger.info(
+        f'Found {len(gtfiles)} groundtruths and {len(tsfiles)} test files.'
+    )
+
+    logger.info(f'Available LAP solvers {mm.lap.available_solvers}')
+    logger.info(f"Default LAP solver \'{mm.lap.default_solver}\'")
     logger.info('Loading files.')
-    
+
     gt = OrderedDict([(Path(f).parts[-3], mm.io.loadtxt(f, fmt='mot15-2D', min_confidence=1)) for f in gtfiles])
     ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0], mm.io.loadtxt(f, fmt='mot15-2D', min_confidence=-1)) for f in tsfiles])    
-    
-    mh = mm.metrics.create()    
+
+    mh = mm.metrics.create()
     accs, names = compare_dataframes(gt, ts)
-    
+
     logger.info('Running metrics')
     metrics = ['recall', 'precision', 'num_unique_objects', 'mostly_tracked',
                'partially_tracked', 'mostly_lost', 'num_false_positives', 'num_misses',
@@ -255,8 +261,8 @@ def main(exp, args, num_gpu):
     div_dict = {
         'num_objects': ['num_false_positives', 'num_misses', 'num_switches', 'num_fragmentations'],
         'num_unique_objects': ['mostly_tracked', 'partially_tracked', 'mostly_lost']}
-    for divisor in div_dict:
-        for divided in div_dict[divisor]:
+    for divisor, value in div_dict.items():
+        for divided in value:
             summary[divided] = (summary[divided] / summary[divisor])
     fmt = mh.formatters
     change_fmt_list = ['num_false_positives', 'num_misses', 'num_switches', 'num_fragmentations', 'mostly_tracked',
